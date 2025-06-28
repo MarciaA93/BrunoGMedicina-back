@@ -1,6 +1,6 @@
 
 import dotenv from 'dotenv';
-
+dotenv.config();
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -11,7 +11,7 @@ import mercadopagoRoutes from './routes/mercadopago.js';
 import compraRoutes from './routes/compra.routes.js';
 
 console.log('🌍 FRONTEND_URL:', process.env.FRONTEND_URL);
-dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
