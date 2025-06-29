@@ -1,4 +1,3 @@
-
 import dotenv from 'dotenv';
 dotenv.config();
 import express from 'express';
@@ -12,17 +11,31 @@ import compraRoutes from './routes/compra.routes.js';
 
 console.log('🌍 FRONTEND_URL:', process.env.FRONTEND_URL);
 
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Middleware para parsear JSON
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: ['http://localhost:5173', 'https://brunograttonni.netlify.app'],
-  credentials: true
-}));
+
+// ✅ CORS con whitelist
+const whitelist = [
+  'http://localhost:5173',
+  'https://brunograttonni.netlify.app'
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || whitelist.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 // Rutas
 app.use('/api/admin', adminRoutes);
@@ -36,7 +49,7 @@ mongoose
   .then(() => {
     console.log('🟢 Conectado a MongoDB Atlas');
 
-    // 🔗 Rutas protegidas o dependientes de la DB
+    // Solo se levanta si DB está OK
     app.use('/api/turnos', turnoRoutes);
 
     app.listen(PORT, () => {
@@ -45,13 +58,13 @@ mongoose
   })
   .catch((error) => {
     console.error('❌ Error al conectar con MongoDB:', error);
-    console.log("MONGO_URI:", process.env.MONGO_URI);
   });
 
-// Ruta raíz de prueba
+// Ruta raíz
 app.get('/', (req, res) => {
   res.send('Servidor funcionando!');
 });
+
 
 
 
