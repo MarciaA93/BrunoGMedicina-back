@@ -21,22 +21,29 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ CORS con whitelist
 const whitelist = [
   'http://localhost:5173',
-  'https://brunograttonni.netlify.app'
+  'https://brunograttonni.netlify.app',
+  'https://www.brunograttonni.netlify.app'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('CORS origin:', origin);
     if (!origin || whitelist.includes(origin)) {
       callback(null, true);
     } else {
+      console.log('CORS blocked:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
+  credentials: true
 };
 
 app.use(cors(corsOptions));
 
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
 // Rutas
 app.use('/api/admin', adminRoutes);
 app.use('/api/precios', priceRoutes);
