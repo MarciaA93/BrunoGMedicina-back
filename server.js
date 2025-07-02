@@ -22,7 +22,8 @@ app.use(express.urlencoded({ extended: true }));
 const whitelist = [
   'http://localhost:5173',
   'https://brunograttonni.netlify.app',
-  'https://www.brunograttonni.netlify.app'
+  'https://www.brunograttonni.netlify.app',
+   'brunogmedicina-back-production.up.railway.app'
 ];
 
 const corsOptions = {
