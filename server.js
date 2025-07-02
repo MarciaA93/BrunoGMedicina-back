@@ -53,6 +53,11 @@ app.use('/api/precios', priceRoutes);
 app.use('/api/mercadopago', mercadopagoRoutes);
 app.use('/api', compraRoutes);
 
+// Ruta raíz SIEMPRE disponible
+app.get('/', (req, res) => {
+  res.send('Servidor funcionando!');
+});
+
 // Conexión a MongoDB
 mongoose
   .connect(process.env.MONGO_URI)
@@ -70,10 +75,6 @@ mongoose
     console.error('❌ Error al conectar con MongoDB:', error);
   });
 
-// Ruta raíz
-app.get('/', (req, res) => {
-  res.send('Servidor funcionando!');
-});
 
 
 
