@@ -29,7 +29,8 @@ const whitelist = [
   'http://localhost:5173',
   'https://brunograttonni.netlify.app',
   'https://www.brunograttonni.netlify.app',
-  'https://brunogmedicina-back-production.up.railway.app'
+  'https://brunogmedicina-back-production.up.railway.app',
+  'https://brunogmedicinachina.netlify.app'
 ];
 
 const corsOptions = {
