@@ -73,9 +73,9 @@ mongoose.connect(process.env.MONGO_URI, {
   app.use('/api', compraRoutes);
   app.use('/api/turnos', turnoRoutes);
 
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
-  });
+  app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+});
 })
 .catch((error) => {
   console.error('❌ Error al conectar con MongoDB:', error.message);
