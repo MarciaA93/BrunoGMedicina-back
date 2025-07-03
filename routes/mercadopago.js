@@ -43,3 +43,4 @@ router.post('/create_preference', async (req, res) => {
     res.status(500).json({ error: 'No se pudo crear la preferencia de pago' });
   }
 });
+export default router;
