@@ -10,6 +10,8 @@ import adminRoutes from './routes/admin.routes.js';
 import priceRoutes from './routes/price.routes.js';
 import mercadopagoRoutes from './routes/mercadopago.js';
 import compraRoutes from './routes/compra.routes.js';
+import turnosConfirmadosRoutes from './routes/turnosConfirmados.js';
+
 
 console.log('⏳ Iniciando servidor...');
 console.log('🔑 MP_ACCESS_TOKEN:', process.env.MP_ACCESS_TOKEN ? '✅ cargado' : '❌ faltante');
@@ -23,6 +25,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 
 // CORS con whitelist
 const whitelist = [
@@ -73,6 +76,7 @@ mongoose.connect(process.env.MONGO_URI, {
   app.use('/api/mercadopago', mercadopagoRoutes);
   app.use('/api', compraRoutes);
   app.use('/api/turnos', turnoRoutes);
+  app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
 
   app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
