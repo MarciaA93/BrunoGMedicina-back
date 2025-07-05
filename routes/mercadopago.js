@@ -23,6 +23,15 @@ router.post('/create_preference', async (req, res) => {
 
   try {
     const preference = new Preference(client);
+    
+    console.log('📄 Preferencia a enviar:', {
+  title,
+  unit_price,
+  nombre,
+  email,
+  date,
+  time
+});
 
     const result = await preference.create({
       body: {
