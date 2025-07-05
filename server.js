@@ -33,7 +33,8 @@ const whitelist = [
   'https://brunograttonni.netlify.app',
   'https://www.brunograttonni.netlify.app',
   'https://brunogmedicina-back-production.up.railway.app',
-  'https://brunogmedicinachina.netlify.app'
+  'https://brunogmedicinachina.netlify.app',
+  'https://brunomtch.com'
 ];
 
 const corsOptions = {
