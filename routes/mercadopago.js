@@ -23,14 +23,13 @@ router.post('/create_preference', async (req, res) => {
 
   try {
     const preference = new Preference(client);
-    
+
     console.log('📄 Preferencia a enviar:', {
-  title,
-  unit_price,
-  nombre,
-  email,
-  date,
-  time
+      nombre,
+      email,
+      tipo: title,
+      date,
+      time
 });
 
     const result = await preference.create({
@@ -47,11 +46,22 @@ router.post('/create_preference', async (req, res) => {
           failure: `${process.env.FRONTEND_URL}?pago=fallo`,
           pending: `${process.env.FRONTEND_URL}?pago=pendiente`
         },
-        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook?date=${date}&time=${time}&nombre=${nombre}&email=${email}&producto=${title}`,
-        auto_return: 'approved'
+        auto_return: 'approved',
+
+        // ✅ Nuevo: enviamos datos personalizados dentro de `metadata`
+        metadata: {
+          nombre,
+          email,
+          producto: title,
+          date,
+          time
+        },
+
+        // ✅ Limpio: no pasamos datos en query
+        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`
       }
     });
-
+    
     res.json({ init_point: result.init_point });
   } catch (err) {
     console.error('❌ Error al crear preferencia:', err);
