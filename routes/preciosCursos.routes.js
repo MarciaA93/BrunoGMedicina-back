@@ -1,11 +1,11 @@
 import express from 'express';
-import PrecioCurso from '../models/PrecioCurso.js';
+import PrecioCursos from '../models/PrecioCursos.js';
 
 const router = express.Router();
 
 // Obtener todos los precios de cursos
 router.get('/', async (req, res) => {
-  const cursos = await PrecioCurso.find();
+  const cursos = await PrecioCursos.find();
   res.json(cursos);
 });
 
@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
 router.put('/:nombreCurso', async (req, res) => {
   const { nombreCurso } = req.params;
   const { price } = req.body;
-  const curso = await PrecioCurso.findOneAndUpdate(
+  const curso = await PrecioCursos.findOneAndUpdate(
     { nombreCurso },
     { price },
     { new: true }

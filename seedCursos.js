@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import PrecioCurso from './models/PrecioCursos.js';
+import PrecioCursos from './models/PrecioCursos.js';
 
 dotenv.config();
 
@@ -10,9 +10,9 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(async () => {
   console.log('Conectado a MongoDB');
 
-  await PrecioCurso.deleteMany();
+  await PrecioCursos.deleteMany();
 
-  await PrecioCurso.insertMany([
+  await PrecioCursos.insertMany([
     { nombreCurso: 'Curso de Masaje TuiNa', price: 138 },
     { nombreCurso: 'Renueva tu SER - Sesión 1 a 1', price: 67 }
   ]);
