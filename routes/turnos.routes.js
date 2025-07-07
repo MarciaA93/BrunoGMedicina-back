@@ -25,6 +25,17 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.delete('/:fecha', async (req, res) => {
+  try {
+    const { fecha } = req.params;
+    await Turno.findOneAndDelete({ date: fecha });
+    res.sendStatus(204);
+  } catch (err) {
+    console.error('Error al eliminar turno:', err);
+    res.status(500).json({ error: 'Error al eliminar el día' });
+  }
+});
+
 // Obtener todos los turnos
 router.get('/', async (req, res) => {
   try {
