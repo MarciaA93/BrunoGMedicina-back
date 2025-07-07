@@ -7,7 +7,7 @@ import cors from 'cors';
 
 import turnoRoutes from './routes/turnos.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import priceRoutes from './routes/price.routes.js';
+import preciosRoutes from './routes/preciosRoutes.js';
 import mercadopagoRoutes from './routes/mercadopago.js';
 import compraRoutes from './routes/compra.routes.js';
 import turnosConfirmadosRoutes from './routes/turnosConfirmados.js';
@@ -73,7 +73,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
   // Rutas después de conexión exitosa
   app.use('/api/admin', adminRoutes);
-  app.use('/api/precios', priceRoutes);
+  app.use('/api/precios', preciosRoutes);
   app.use('/api/mercadopago', mercadopagoRoutes);
   app.use('/api', compraRoutes);
   app.use('/api/turnos', turnoRoutes);
