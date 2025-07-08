@@ -1,41 +1,44 @@
 // routes/mercadopago.js
 import express from 'express';
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
 const router = express.Router();
 
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+// Configurar Mercado Pago
+const client = new MercadoPagoConfig({
+  accessToken: process.env.MP_ACCESS_TOKEN,
+});
 
-router.post('/create_preference', async (req, res) => {
-  const { title, unit_price, nombre, email } = req.body;
-  const { date, time } = req.query;
+// Ruta para Checkout API
+router.post('/pagar', async (req, res) => {
+  const { token, description, amount, email, installments, payment_method_id, issuer_id } = req.body;
+
+  console.log('🧾 Pago recibido:', req.body);
 
   try {
-    const preference = new Preference(client);
-    const result = await preference.create({
+    const payment = new Payment(client);
+    const result = await payment.create({
       body: {
-        items: [{
-          title,
-          unit_price: Number(unit_price),
-          quantity: 1
-        }],
-        back_urls: {
-          success: `${process.env.FRONTEND_URL}?pago=exitoso`,
-          failure: `${process.env.FRONTEND_URL}?pago=fallo`,
-          pending: `${process.env.FRONTEND_URL}?pago=pendiente`
+        token,
+        description,
+        transaction_amount: Number(amount),
+        installments: Number(installments),
+        payment_method_id,
+        issuer_id,
+        payer: {
+          email,
         },
-        auto_return: 'approved',
-        metadata: { nombre, email, date, time, tipo: title },
-        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`
-      }
+      },
     });
 
-    res.json({ init_point: result.init_point });
+    console.log('✅ Pago procesado:', result);
+    res.status(200).json(result);
   } catch (error) {
-    console.error('❌ Error creando preferencia:', error);
-    res.status(500).json({ error: 'Error al generar la preferencia de pago' });
+    console.error('❌ Error al procesar pago:', error);
+    res.status(500).json({ error: 'Fallo en el procesamiento del pago' });
   }
 });
 
