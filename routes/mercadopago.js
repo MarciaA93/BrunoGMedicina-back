@@ -1,27 +1,22 @@
 // routes/mercadopago.js
 import express from 'express';
-import dotenv from 'dotenv';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
+import dotenv from 'dotenv';
 
 dotenv.config();
 const router = express.Router();
 
-// Configurar cliente de Mercado Pago
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
-// Crear preferencia
 router.post('/create_preference', async (req, res) => {
-  const {
-    title,
-    unit_price,
-    quantity,
-    nombre,
-    email,
-    date,
-    time
-  } = req.body;
+  const { title, unit_price, quantity, nombre, email } = req.body;
+  const { date, time } = req.query;
+
+  if (!date || !time) {
+    return res.status(400).json({ error: 'Falta fecha u hora' });
+  }
 
   try {
     const preference = new Preference(client);
@@ -32,19 +27,12 @@ router.post('/create_preference', async (req, res) => {
           {
             title,
             unit_price: Number(unit_price),
-            quantity: Number(quantity),
-          },
+            quantity,
+          }
         ],
         payer: {
           name: nombre,
-          email: email,
-        },
-        metadata: {
-          nombre,
           email,
-          tipo: title,
-          date,
-          time,
         },
         back_urls: {
           success: `${process.env.FRONTEND_URL}/success`,
@@ -53,13 +41,20 @@ router.post('/create_preference', async (req, res) => {
         },
         auto_return: 'approved',
         notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
+        metadata: {
+          nombre,
+          email,
+          tipo: title,
+          date,
+          time,
+        },
       },
     });
 
-    res.json({ init_point: result.init_point });
+    res.status(200).json({ init_point: result.init_point });
   } catch (error) {
     console.error('❌ Error al crear preferencia:', error);
-    res.status(500).json({ error: 'Error al crear preferencia' });
+    res.status(500).json({ error: 'Error al generar preferencia' });
   }
 });
 
