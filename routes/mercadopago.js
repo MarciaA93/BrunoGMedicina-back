@@ -20,6 +20,16 @@ router.post('/create_preference', async (req, res) => {
   const { date, time } = req.query;
 
   console.log('📦 Datos recibidos:', req.body, '📅 Fecha:', date, '⏰ Hora:', time);
+  console.log('🧾 Datos recibidos del front:');
+console.log({
+  title,
+  unit_price,
+  nombre,
+  email,
+  date,
+  time,
+  typeof_unit_price: typeof unit_price,
+});
 
   try {
     const preference = new Preference(client);
