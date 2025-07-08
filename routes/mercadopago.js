@@ -1,44 +1,65 @@
 // routes/mercadopago.js
 import express from 'express';
-import { MercadoPagoConfig, Payment } from 'mercadopago';
 import dotenv from 'dotenv';
+import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 dotenv.config();
-
 const router = express.Router();
 
-// Configurar Mercado Pago
+// Configurar cliente de Mercado Pago
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
-// Ruta para Checkout API
-router.post('/pagar', async (req, res) => {
-  const { token, description, amount, email, installments, payment_method_id, issuer_id } = req.body;
-
-  console.log('🧾 Pago recibido:', req.body);
+// Crear preferencia
+router.post('/create_preference', async (req, res) => {
+  const {
+    title,
+    unit_price,
+    quantity,
+    nombre,
+    email,
+    date,
+    time
+  } = req.body;
 
   try {
-    const payment = new Payment(client);
-    const result = await payment.create({
+    const preference = new Preference(client);
+
+    const result = await preference.create({
       body: {
-        token,
-        description,
-        transaction_amount: Number(amount),
-        installments: Number(installments),
-        payment_method_id,
-        issuer_id,
+        items: [
+          {
+            title,
+            unit_price: Number(unit_price),
+            quantity: Number(quantity),
+          },
+        ],
         payer: {
-          email,
+          name: nombre,
+          email: email,
         },
+        metadata: {
+          nombre,
+          email,
+          tipo: title,
+          date,
+          time,
+        },
+        back_urls: {
+          success: `${process.env.FRONTEND_URL}/success`,
+          failure: `${process.env.FRONTEND_URL}/failure`,
+          pending: `${process.env.FRONTEND_URL}/pending`,
+        },
+        auto_return: 'approved',
+        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
       },
     });
 
-    console.log('✅ Pago procesado:', result);
-    res.status(200).json(result);
+    res.json({ init_point: result.init_point });
   } catch (error) {
-    console.error('❌ Error al procesar pago:', error);
-    res.status(500).json({ error: 'Fallo en el procesamiento del pago' });
+    console.error('❌ Error al crear preferencia:', error);
+    res.status(500).json({ error: 'Error al crear preferencia' });
   }
 });
 
