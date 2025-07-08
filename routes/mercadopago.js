@@ -26,10 +26,11 @@ router.post('/create_preference', async (req, res) => {
       body: {
         items: [
           {
-            title: String(title),
-            unit_price: Number(unit_price),
-            quantity: Number(quantity),
-          }
+        title,
+        unit_price: Number(unit_price),
+        quantity,
+        currency_id: 'ARS'
+      }
         ],
         payer: {
           name: String(nombre),

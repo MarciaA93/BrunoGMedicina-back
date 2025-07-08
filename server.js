@@ -11,6 +11,7 @@ import preciosRoutes from './routes/preciosRoutes.js';
 import mercadopagoRoutes from './routes/mercadopago.js';
 import compraRoutes from './routes/compra.routes.js';
 import turnosConfirmadosRoutes from './routes/turnosConfirmados.js';
+import testMpRoutes from './routes/mercadopago.test.js';
 
 
 console.log('⏳ Iniciando servidor...');
@@ -79,6 +80,7 @@ mongoose.connect(process.env.MONGO_URI, {
   app.use('/api/turnos', turnoRoutes);
   app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
   app.use('/api/precios-cursos', preciosCursosRoutes);
+  app.use('/api/mercadopago', testMpRoutes);
 
   app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
