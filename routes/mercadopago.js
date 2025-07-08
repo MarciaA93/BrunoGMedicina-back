@@ -31,54 +31,49 @@ console.log({
   typeof_unit_price: typeof unit_price,
 });
 
-  try {
-    const preference = new Preference(client);
+ try {
+  const preference = new Preference(client);
 
-    console.log('📄 Preferencia a enviar:', {
-      nombre,
-      email,
-      tipo: title,
-      date,
-      time
-});
+  console.log('📄 Preferencia a enviar:', {
+    nombre,
+    email,
+    tipo: title,
+    date,
+    time
+  });
 
-    const result = await preference.create({
-      body: {
-        items: [
-         {
-  title: selectedProduct.title, // ejemplo: 'Masaje Tradicional'
-  unit_price: selectedProduct.price, // ejemplo: 25000
-  quantity: 1,
-  nombre: clienteData.nombre, // ejemplo: 'Marcia'
-  email: clienteData.email // ejemplo: 'marcia@email.com'
+  const result = await preference.create({
+    body: {
+      items: [
+        {
+          title,
+          unit_price: Number(unit_price),
+          quantity: 1
+        }
+      ],
+      back_urls: {
+        success: `${process.env.FRONTEND_URL}?pago=exitoso`,
+        failure: `${process.env.FRONTEND_URL}?pago=fallo`,
+        pending: `${process.env.FRONTEND_URL}?pago=pendiente`
+      },
+      auto_return: 'approved',
+      metadata: {
+        nombre,
+        email,
+        producto: title,
+        date,
+        time
+      },
+      notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`
+    }
+  });
+
+  res.json({ init_point: result.init_point });
+} catch (err) {
+  console.error('❌ Error al crear preferencia:', err);
+  res.status(500).json({ error: 'No se pudo crear la preferencia de pago' });
 }
-        ],
-        back_urls: {
-          success: `${process.env.FRONTEND_URL}?pago=exitoso`,
-          failure: `${process.env.FRONTEND_URL}?pago=fallo`,
-          pending: `${process.env.FRONTEND_URL}?pago=pendiente`
-        },
-        auto_return: 'approved',
 
-        // ✅ Nuevo: enviamos datos personalizados dentro de `metadata`
-        metadata: {
-          nombre,
-          email,
-          producto: title,
-          date,
-          time
-        },
-
-        // ✅ Limpio: no pasamos datos en query
-        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`
-      }
-    });
-    
-    res.json({ init_point: result.init_point });
-  } catch (err) {
-    console.error('❌ Error al crear preferencia:', err);
-    res.status(500).json({ error: 'No se pudo crear la preferencia de pago' });
-  }
 });
 
 // Webhook
