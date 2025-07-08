@@ -35,11 +35,13 @@ router.post('/create_preference', async (req, res) => {
     const result = await preference.create({
       body: {
         items: [
-          {
-            title,
-            unit_price: Number(unit_price),
-            quantity: 1
-          }
+         {
+  title: selectedProduct.title, // ejemplo: 'Masaje Tradicional'
+  unit_price: selectedProduct.price, // ejemplo: 25000
+  quantity: 1,
+  nombre: clienteData.nombre, // ejemplo: 'Marcia'
+  email: clienteData.email // ejemplo: 'marcia@email.com'
+}
         ],
         back_urls: {
           success: `${process.env.FRONTEND_URL}?pago=exitoso`,
