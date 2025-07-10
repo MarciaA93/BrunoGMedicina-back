@@ -13,8 +13,7 @@ const client = new MercadoPagoConfig({
 const preference = new Preference(client);
 
 router.post('/create_preference', async (req, res) => {
-  const { title, unit_price, quantity, nombre, email } = req.body;
-  const { date, time } = req.query;
+  const { title, unit_price, quantity, nombre, email, date, time } = req.body;
 
   // Validación fuerte
   if (!title || !unit_price || !quantity || !nombre || !email || !date || !time) {
@@ -23,6 +22,8 @@ router.post('/create_preference', async (req, res) => {
 
   try {
     const result = await preference.create({
+
+      
       body: {
         items: [
           {
@@ -33,7 +34,6 @@ router.post('/create_preference', async (req, res) => {
       }
         ],
         payer: {
-          name: String(nombre),
           email: String(email),
         },
         back_urls: {
