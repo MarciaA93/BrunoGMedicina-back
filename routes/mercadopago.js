@@ -23,7 +23,6 @@ router.post('/create_preference', async (req, res) => {
   try {
     const result = await preference.create({
 
-      
       body: {
         items: [
           {
@@ -32,6 +31,7 @@ router.post('/create_preference', async (req, res) => {
         quantity,
         currency_id: 'ARS'
       }
+      
         ],
         payer: {
           email: String(email),
@@ -51,7 +51,11 @@ router.post('/create_preference', async (req, res) => {
           time: String(time),
         },
       },
+    
+
     });
+      console.log("👉 Resultado de preferencia:", result);
+
 
     res.status(200).json({ init_point: result.init_point });
   } catch (error) {
