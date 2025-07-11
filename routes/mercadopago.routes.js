@@ -6,10 +6,12 @@ dotenv.config();
 const router = express.Router();
 
 router.post('/webhook', express.json(), async (req, res) => {
+  console.log("📩 Webhook recibido:", JSON.stringify(req.body, null, 2));
   const paymentId = req.body.data?.id;
   const topic = req.query.topic || req.body.type;
 
   if (topic !== 'payment' || !paymentId) {
+     console.log("🔍 topic:", topic, "paymentId:", req.body.data?.id);
     console.log(`Webhook recibido con topic=${topic} y paymentId=${paymentId}, ignorando.`);
     return res.sendStatus(200); // ignorar otros eventos
   }
