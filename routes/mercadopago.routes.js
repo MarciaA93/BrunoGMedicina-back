@@ -59,19 +59,19 @@ router.post('/webhook', express.json(), async (req, res) => {
 
     // Guardar turno confirmado
     console.log('💾 Guardando turno confirmado...');
-    const guardadoResponse = await fetch(`${process.env.BACKEND_URL}/api/turnos-confirmados`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: metadata.nombre,
-        email: metadata.email,
-        tipo: metadata.tipo,
-        date: metadata.date,
-        time: metadata.time,
-      })
-      
-    }
-  );
+    console.log("🌐 URL de guardado:", `${process.env.BACKEND_URL}/api/turnos-confirmados`);
+   const guardadoResponse = await fetch(`https://brunogmedicina-back-production.up.railway.app/api/turnos-confirmados`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    nombre: metadata.nombre,
+    email: metadata.email,
+    tipo: metadata.tipo,
+    date: metadata.date,
+    time: metadata.time,
+  }),
+});
+
   console.log('🕵️ Revisando respuesta del guardado...');
 const texto = await guardadoResponse.text();
 console.log('📨 Respuesta completa del servidor turnos-confirmados:', texto);
