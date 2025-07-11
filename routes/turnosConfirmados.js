@@ -1,7 +1,10 @@
 import express from 'express';
 import TurnoConfirmado from '../models/TurnoConfirmado.js';
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 
+
+dotenv.config();
 const router = express.Router();
 
 // Obtener todos los turnos confirmados
@@ -23,7 +26,7 @@ router.post('/', async (req, res) => {
 }
 
   try {
-   const nuevo = new TurnoConfirmados({
+   const nuevo = new TurnoConfirmado({
   nombre,
   email,
   producto: tipo,
