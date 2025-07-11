@@ -16,33 +16,40 @@ router.post('/webhook', express.json(), async (req, res) => {
   console.log(`🧾 paymentId detectado: ${paymentId}`);
 
   // 🔸 Si topic = merchant_order, buscar el paymentId desde la orden
-  if (topic === 'merchant_order' && !paymentId) {
-    const orderId = req.body.data?.id;
-    console.log(`🛒 Es merchant_order, ID de orden: ${orderId}`);
+ if (topic === 'merchant_order' && !paymentId) {
+  const resourceUrl = req.body.resource;
+  const orderId = resourceUrl?.split("/").pop(); // ✅ EXTRAEMOS el ID
 
-    try {
-      const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
-        headers: {
-          Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-        },
-      });
+  console.log(`🛒 Es merchant_order, ID de orden extraído: ${orderId}`);
 
-      const order = await orderResponse.json();
-      const pagos = order.payments || [];
-      const aprobado = pagos.find(p => p.status === 'approved');
-
-      if (!aprobado) {
-        console.log('⏳ No hay pagos aprobados aún en la orden.');
-        return res.sendStatus(200);
-      }
-
-      paymentId = aprobado.id;
-      console.log(`✅ paymentId obtenido desde merchant_order: ${paymentId}`);
-    } catch (error) {
-      console.error('❌ Error al consultar merchant_order:', error);
-      return res.sendStatus(500);
-    }
+  if (!orderId) {
+    console.error("❌ No se pudo extraer el ID de orden desde resource");
+    return res.sendStatus(200);
   }
+
+  try {
+    const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
+      headers: {
+        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+      },
+    });
+
+    const order = await orderResponse.json();
+    const pagos = order.payments || [];
+    const aprobado = pagos.find(p => p.status === 'approved');
+
+    if (!aprobado) {
+      console.log('⏳ No hay pagos aprobados aún en la orden.');
+      return res.sendStatus(200);
+    }
+
+    paymentId = aprobado.id;
+    console.log(`✅ paymentId obtenido desde merchant_order: ${paymentId}`);
+  } catch (error) {
+    console.error('❌ Error al consultar merchant_order:', error);
+    return res.sendStatus(500);
+  }
+}
 
   // Si no hay paymentId o no es un topic válido, ignorar
   if (topic !== 'payment' && topic !== 'merchant_order') {
