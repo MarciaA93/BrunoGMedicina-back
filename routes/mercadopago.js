@@ -14,9 +14,20 @@ const client = new MercadoPagoConfig({
 const preference = new Preference(client);
 
 router.post('/create_preference', async (req, res) => {
+  console.log("📥 Datos recibidos en body:", req.body); // 👈 DEBUG CLAVE
+
   const { title, unit_price, quantity, nombre, email, date, time } = req.body;
 
-  // Validación fuerte
+  // Verificamos uno por uno
+  if (!title) console.error("❌ Falta title");
+  if (!unit_price) console.error("❌ Falta unit_price");
+  if (!quantity) console.error("❌ Falta quantity");
+  if (!nombre) console.error("❌ Falta nombre");
+  if (!email) console.error("❌ Falta email");
+  if (!date) console.error("❌ Falta date");
+  if (!time) console.error("❌ Falta time");
+
+  // Validación general
   if (!title || !unit_price || !quantity || !nombre || !email || !date || !time) {
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
@@ -42,25 +53,24 @@ router.post('/create_preference', async (req, res) => {
         },
         auto_return: 'approved',
         notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
-       metadata: {
-  nombre: String(nombre),
-  email: String(email),
-  tipo: String(title),
-  date: String(date),
-  time: String(time)
-}
+        metadata: {
+          nombre: String(nombre),
+          email: String(email),
+          tipo: String(title),
+          date: String(date),
+          time: String(time)
+        }
       }
     });
 
-    console.log('👉 Resultado de preferencia:', result);
-    console.log('👉 Metadata en preferencia creada:', result.metadata);
+    console.log('✅ Resultado de preferencia:', result);
     res.status(200).json({ init_point: result.init_point });
-    console.log('🧾 Preferencia completa:', JSON.stringify(result.body, null, 2));
 
   } catch (error) {
     console.error('❌ Error al crear preferencia:', error.message || error);
     res.status(500).json({ error: 'Error al generar preferencia' });
   }
 });
+
 
 export default router;
