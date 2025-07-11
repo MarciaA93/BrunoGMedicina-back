@@ -59,7 +59,7 @@ router.post('/webhook', express.json(), async (req, res) => {
 
     // Guardar turno confirmado
     console.log('💾 Guardando turno confirmado...');
-    const guardadoResponse = await fetch(`${process.env.BACKEND_URL}/api/turno-confirmados`, {
+    const guardadoResponse = await fetch(`${process.env.BACKEND_URL}/api/turnos-confirmados`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -69,7 +69,7 @@ router.post('/webhook', express.json(), async (req, res) => {
         date: metadata.date,
         time: metadata.time,
       }),
-      console.log('✅ Guardado response status:', guardadoResponse.status);
+      
     });
 
     if (!guardadoResponse.ok) {
