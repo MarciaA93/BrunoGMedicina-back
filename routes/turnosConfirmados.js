@@ -19,8 +19,16 @@ router.get('/', async (req, res) => {
 
 // Guardar turno confirmado
 router.post('/', async (req, res) => {
+   console.log("📥 POST recibido en /api/turnos-confirmados");
+  console.log("📦 Body recibido:", req.body);
   const { nombre, email, tipo, date, time } = req.body;
 
+  console.log("👀 Campos recibidos:");
+console.log("nombre:", nombre);
+console.log("email:", email);
+console.log("tipo:", tipo);
+console.log("date:", date);
+console.log("time:", time);
   if (!nombre || !email || !tipo || !date || !time) {
   return res.status(400).json({ error: 'Faltan datos obligatorios' });
 }
