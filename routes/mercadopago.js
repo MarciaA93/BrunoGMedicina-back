@@ -21,31 +21,40 @@ router.post('/create_preference', async (req, res) => {
   }
 
   try {
-   const result = await preference.create({
-  body: {
-    items: [
-      {
-        title: "Masaje prueba",
-        unit_price: 1000,
-        quantity: 1,
-        currency_id: "ARS"
+    const result = await preference.create({
+      body: {
+        items: [
+          {
+            title: String(title),
+            unit_price: Number(unit_price),
+            quantity: Number(quantity),
+            currency_id: 'ARS'
+          }
+        ],
+        payer: {
+          email: String(email),
+        },
+        back_urls: {
+          success: `${process.env.FRONTEND_URL}/success`,
+          failure: `${process.env.FRONTEND_URL}/failure`,
+          pending: `${process.env.FRONTEND_URL}/pending`
+        },
+        auto_return: 'approved',
+        notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
+        metadata: {
+          nombre: String(nombre),
+          email: String(email),
+          tipo: String(title),
+          date: String(date),
+          time: String(time),
+        }
       }
-    ],
-    payer: {
-      email: "cliente@test.com"
-    },
-    back_urls: {
-      success: "https://brunomtch.com/success",
-      failure: "https://brunomtch.com/failure",
-      pending: "https://brunomtch.com/pending"
-    },
-    auto_return: "approved"
-  }
-});
-      console.log("👉 Resultado de preferencia:", result);
+    });
 
+    console.log('👉 Resultado de preferencia:', result);
 
     res.status(200).json({ init_point: result.init_point });
+
   } catch (error) {
     console.error('❌ Error al crear preferencia:', error.message || error);
     res.status(500).json({ error: 'Error al generar preferencia' });
