@@ -10,6 +10,7 @@ const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
+
 const preference = new Preference(client);
 
 router.post('/create_preference', async (req, res) => {
@@ -52,8 +53,9 @@ router.post('/create_preference', async (req, res) => {
     });
 
     console.log('👉 Resultado de preferencia:', result);
-
+    console.log('👉 Metadata en preferencia creada:', result.metadata);
     res.status(200).json({ init_point: result.init_point });
+    console.log('🧾 Preferencia completa:', JSON.stringify(result.body, null, 2));
 
   } catch (error) {
     console.error('❌ Error al crear preferencia:', error.message || error);
