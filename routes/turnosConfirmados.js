@@ -7,7 +7,7 @@ const router = express.Router();
 // Obtener todos los turnos confirmados
 router.get('/', async (req, res) => {
   try {
-    const confirmados = await TurnoConfirmado.find().sort({ fechaCompra: -1 });
+    const confirmados = await TurnoConfirmados.find().sort({ fechaCompra: -1 });
     res.json(confirmados);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
 }
 
   try {
-   const nuevo = new TurnoConfirmado({
+   const nuevo = new TurnoConfirmados({
   nombre,
   email,
   producto: tipo,
