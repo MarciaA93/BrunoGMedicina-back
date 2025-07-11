@@ -41,13 +41,13 @@ router.post('/create_preference', async (req, res) => {
         },
         auto_return: 'approved',
         notification_url: `${process.env.BACKEND_URL}/api/mercadopago/webhook`,
-        metadata: {
-          nombre: String(nombre),
-          email: String(email),
-          tipo: String(title),
-          date: String(date),
-          time: String(time),
-        }
+       metadata: {
+  nombre: String(nombre),
+  email: String(email),
+  tipo: String(title),
+  date: String(date),
+  time: String(time)
+}
       }
     });
 

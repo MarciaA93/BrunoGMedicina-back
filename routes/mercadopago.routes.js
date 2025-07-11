@@ -19,6 +19,7 @@ router.post('/webhook', express.json(), async (req, res) => {
     });
 
     const payment = await response.json();
+    console.log("📦 Metadata recibida desde Mercado Pago:", payment.metadata);
 
     if (payment.status !== 'approved') {
       console.log('🕒 Pago no aprobado aún:', payment.status);
