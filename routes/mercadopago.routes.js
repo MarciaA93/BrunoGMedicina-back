@@ -70,9 +70,12 @@ router.post('/webhook', express.json(), async (req, res) => {
         time: metadata.time,
       })
       
-    });
-    const guardadoTexto = await guardadoResponse.text();
-console.log("📨 Respuesta del guardado:", guardadoTexto);
+    }
+  );
+  console.log('🕵️ Revisando respuesta del guardado...');
+const texto = await guardadoResponse.text();
+console.log('📨 Respuesta completa del servidor turnos-confirmados:', texto);
+    
 
     if (!guardadoResponse.ok) {
       console.error(`Error guardando turno confirmado:`, guardadoResponse.statusText);
