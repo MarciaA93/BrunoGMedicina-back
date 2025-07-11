@@ -7,8 +7,9 @@ const router = express.Router();
 
 router.post('/webhook', express.json(), async (req, res) => {
   console.log("📩 Webhook recibido:", JSON.stringify(req.body, null, 2));
-  const paymentId = req.body.data?.id;
+  const paymentId = req.body.data?.id || req.body.data?.id_payment || req.body.id || req.body.data?.payment_id;
   const topic = req.query.topic || req.body.type;
+  console.log("req.body:", req.body);
 
   if (topic !== 'payment' || !paymentId) {
      console.log("🔍 topic:", topic, "paymentId:", req.body.data?.id);
