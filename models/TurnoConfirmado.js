@@ -4,11 +4,11 @@ import mongoose from 'mongoose';
 const turnoConfirmadoSchema = new mongoose.Schema({
   nombre: String,
   email: String,
-  producto: String,
+  tipo: String, // ← este campo ahora se llama tipo, no producto
+  date: String, // ← ahora coincide con metadata.date
+  time: String, // ← ahora coincide con metadata.time
   fechaCompra: Date,
-  metodo: String,
-  fecha: String,
-  hora: String
+  metodo: String
 });
 
 export default mongoose.model('TurnoConfirmado', turnoConfirmadoSchema);

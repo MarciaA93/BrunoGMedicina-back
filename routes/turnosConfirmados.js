@@ -34,15 +34,15 @@ console.log("time:", time);
 }
 
   try {
-   const nuevo = new TurnoConfirmado({
-  nombre,
-  email,
-  producto: tipo,
-  fecha: date,
-  hora: time,
-  fechaCompra: new Date(),
-  metodo: 'Mercado Pago',
-});
+  const nuevo = new TurnoConfirmado({
+      nombre,
+      email,
+      tipo,         // ahora se llama "tipo", no "producto"
+      date,         // ahora se llama "date", no "fecha"
+      time,         // ahora se llama "time", no "hora"
+      fechaCompra: new Date(),
+      metodo: 'Mercado Pago',
+    });
 
     await nuevo.save();
 // Configura tu transporte de correo (ejemplo con Gmail)
