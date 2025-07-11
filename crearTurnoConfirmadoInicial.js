@@ -11,11 +11,11 @@ mongoose.connect(process.env.MONGO_URI)
     const testTurno = new TurnoConfirmado({
       nombre: "Test de creación",
       email: "test@ejemplo.com",
-      producto: "Masaje Test",
+      tipo: "Masaje Test",
       fechaCompra: new Date(),
       metodo: "Test Manual",
-      fecha: "2025-07-11",
-      hora: "12:00"
+      date: "2025-07-11",
+      time: "12:00"
     });
 
     await testTurno.save();
