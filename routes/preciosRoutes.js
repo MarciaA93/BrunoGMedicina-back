@@ -16,12 +16,12 @@ router.get('/', async (req, res) => {
 // PUT /api/precios/:tipo - Actualizar el precio de un masaje
 router.put('/:tipo', async (req, res) => {
   const { tipo } = req.params;
-  const { price } = req.body;
+    const { price, price2 } = req.body;
 
   try {
     const updated = await Precio.findOneAndUpdate(
       { masajeType: tipo },
-      { price },
+      { price, price2 },
       { new: true, upsert: true } // upsert crea si no existe
     );
     res.json(updated);

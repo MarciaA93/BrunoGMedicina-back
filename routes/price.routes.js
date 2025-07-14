@@ -10,7 +10,7 @@ router.put('/:tipo', async (req, res) => {
   const { price } = req.body;
   const updated = await Price.findOneAndUpdate(
     { masajeType: req.params.tipo },
-    { price },
+    { price, price2  },
     { new: true, upsert: true }
   );
   res.json(updated);
