@@ -7,7 +7,7 @@ router.get('/', async (req, res) => {
   res.json(await Price.find());
 });
 router.put('/:tipo', async (req, res) => {
-  const { price } = req.body;
+  const { price, price2 } = req.body;
   const updated = await Price.findOneAndUpdate(
     { masajeType: req.params.tipo },
     { price, price2  },
