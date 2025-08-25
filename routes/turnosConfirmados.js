@@ -64,6 +64,9 @@ await transporter.sendMail({
     <p>Tu turno fue confirmado para el día <strong>${date}</strong> a las <strong>${time}</strong>.</p>
     <p>Tipo de masaje: <strong>${tipo}</strong></p>
     <p>Gracias por confiar en nosotros 🙌</p>
+
+    <p>📱 WhatsApp de contacto:+5492617242768</p>
+    <p>📍 Ubicación:Paraná 1132, GC, MDZ.</p>
   `,
 });
 

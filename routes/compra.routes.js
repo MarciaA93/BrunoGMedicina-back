@@ -4,7 +4,6 @@ import express from 'express';
 import Compra from '../models/Compra.js';
 import nodemailer from 'nodemailer';
 
-
 dotenv.config();
 
 const router = express.Router();
@@ -42,8 +41,8 @@ console.log('🧪 EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '✅ cargada' :
 // Ruta para guardar la compra y enviar el email
 router.post('/guardar-compra', async (req, res) => {
   try {
-    const { nombre, email, producto, paypalDetails } = req.body;
-    console.log('📥 Datos recibidos:', { nombre, email, producto });
+    const { nombre, email, producto, paypalDetails, metodoPago } = req.body;
+    console.log('📥 Datos recibidos:', { nombre, email, producto, metodoPago });
 
     // Validación de email
     if (!email || !email.includes('@') || !email.includes('.')) {
@@ -51,18 +50,28 @@ router.post('/guardar-compra', async (req, res) => {
       return res.status(400).json({ error: 'Dirección de email inválida' });
     }
 
+    // Precios diferenciados USD vs ARS
     const precios = {
-      curso: 138,
-      sesion: 67,
+      curso: { usd: 138, ars: 55000 },
+      sesion: { usd: 67, ars: 27000 },
     };
+
+    // Determinar precio según método de pago
+    let precioFinal = 0;
+    if (metodoPago === 'paypal') {
+      precioFinal = precios[producto]?.usd || 0;
+    } else if (metodoPago === 'mercadopago') {
+      precioFinal = precios[producto]?.ars || 0;
+    }
 
     const nuevaCompra = new Compra({
       nombre,
       email,
       producto,
-      precio: precios[producto] || 0,
+      precio: precioFinal,
       descripcion: paypalDetails?.purchase_units?.[0]?.description || '',
       paypalDetails,
+      metodoPago, // guardamos también el método
     });
 
     await nuevaCompra.save();
@@ -88,4 +97,3 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
-
