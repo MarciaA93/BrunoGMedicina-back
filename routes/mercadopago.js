@@ -68,4 +68,57 @@ router.post('/create_preference', async (req, res) => {
     res.status(500).json({ error: 'Error al generar preferencia' });
   }
 });
+
+// RUTA NUEVA: Específica para la venta de cursos
+router.post('/create_course_preference', async (req, res) => {
+  console.log("📥 Datos recibidos para CURSO:", req.body);
+
+  // 1. Recibimos solo los datos necesarios para un curso
+  const { title, unit_price, quantity, nombre, email } = req.body;
+
+  // 2. Validamos solo esos campos
+  if (!title || !unit_price || !quantity || !nombre || !email) {
+    console.error("❌ Faltan datos para la preferencia del curso");
+    return res.status(400).json({ error: 'Faltan datos obligatorios' });
+  }
+
+  try {
+    const result = await preference.create({
+      body: {
+        items: [{
+          title: String(title),
+          unit_price: Number(unit_price),
+          quantity: Number(quantity),
+          currency_id: 'ARS'
+        }],
+        payer: {
+          email: String(email),
+        },
+        back_urls: {
+          // Puedes crear páginas de éxito/falla específicas para cursos si quieres
+          success: "https://brunomtch.com/success-curso",
+          failure: "https://brunomtch.com/failure-curso",
+          pending: "https://brunomtch.com/pending"
+        },
+        auto_return: "approved",
+        notification_url: "https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook",
+        // 3. El metadata ahora es específico para el curso
+        metadata: {
+          nombre: String(nombre),
+          email: String(email),
+          tipo: 'curso', // Identificamos que es un curso
+          nombre_curso: String(title)
+        }
+      }
+    });
+
+    console.log('✅ Preferencia de CURSO creada:', result);
+    res.status(200).json({ init_point: result.init_point });
+
+  } catch (error) {
+    console.error('❌ Error al crear preferencia de CURSO:', error.message || error);
+    res.status(500).json({ error: 'Error al generar preferencia para el curso' });
+  }
+});
+
 export default router;
