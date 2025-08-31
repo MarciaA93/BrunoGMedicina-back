@@ -13,5 +13,12 @@ const turnoSchema = new mongoose.Schema({
   ],
 });
 
+
+
+
 const Turno = mongoose.model('Turno', turnoSchema);
+
+
+
+
 export default Turno;

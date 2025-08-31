@@ -46,6 +46,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// 🔹 Nuevo endpoint: obtener solo las fechas con disponibilidad
+router.get('/disponibles', async (req, res) => {
+  try {
+    const turnos = await Turno.find();
+
+    const fechasDisponibles = turnos
+      .filter(t => t.timeSlots.some(s => s.available))
+      .map(t => t.date);
+
+    res.json({ fechasDisponibles });
+  } catch (error) {
+    console.error("Error al obtener fechas disponibles:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Reservar un turno (poner "available: false")
 router.put('/:date/:time', async (req, res) => {
   const { date, time } = req.params;
@@ -71,5 +87,7 @@ router.put('/:date/:time', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+
 
 export default router;

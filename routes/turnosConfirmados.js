@@ -84,8 +84,7 @@ await transporter.sendMail({
       <li><strong>Fecha:</strong> ${date}</li>
       <li><strong>Hora:</strong> ${time}</li>
     </ul>
-    <p>📱 WhatsApp de contacto:+5492617242768</p>
-    <p>📍 Ubicación:Paraná 1132, GC, MDZ.</p>
+   
   `,
 });
 
