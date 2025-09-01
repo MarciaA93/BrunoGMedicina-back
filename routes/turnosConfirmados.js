@@ -1,10 +1,13 @@
 import express from 'express';
 import TurnoConfirmado from '../models/TurnoConfirmado.js';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import dotenv from 'dotenv';
 
 dotenv.config();
 const router = express.Router();
+
+// Inicializar cliente Resend
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Obtener todos los turnos confirmados
 router.get('/', async (req, res) => {
@@ -24,13 +27,11 @@ router.post('/', async (req, res) => {
 
   const { nombre, email, tipo, date, time, nombre_curso } = req.body;
 
-  // Validación base
   if (!nombre || !email || !tipo) {
     return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email o tipo)' });
   }
 
   try {
-    // Crear objeto para guardar en la DB
     const nuevo = new TurnoConfirmado({
       nombre,
       email,
@@ -42,17 +43,6 @@ router.post('/', async (req, res) => {
     });
 
     await nuevo.save();
-
-    // Configurar transporte Nodemailer
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.EMAIL_FROM,
-        pass: process.env.EMAIL_PASSWORD, // App Password
-      },
-    });
 
     // 📧 Definir contenido según sea curso o turno
     let clienteHTML = "";
@@ -74,8 +64,6 @@ router.post('/', async (req, res) => {
           <li><strong>Email:</strong> ${email}</li>
           <li><strong>Curso:</strong> ${nombre_curso || "Curso"}</li>
         </ul>
-        <p>📱 WhatsApp de contacto: +5492617242768</p>
-        <p>📍 Ubicación: Paraná 1132, GC, MDZ.</p>
       `;
     } else {
       if (!date || !time) {
@@ -104,23 +92,21 @@ router.post('/', async (req, res) => {
     }
 
     // Email al cliente
-    await transporter.sendMail({
-      from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
+    await resend.emails.send({
+      from: 'Bruno G Medicina China <onboarding@resend.dev>',
       to: email,
       subject: tipo === "curso" ? 'Confirmación de tu curso' : 'Confirmación de tu turno',
       html: clienteHTML,
     });
-
     console.log("📧 Email enviado al cliente:", email);
 
     // Email al masajista
-    await transporter.sendMail({
-      from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
-      to: process.env.EMAIL_FROM,
+    await resend.emails.send({
+      from: 'Bruno G Medicina China <onboarding@resend.dev>',
+      to: process.env.EMAIL_FROM, // tu mail personal
       subject: tipo === "curso" ? 'Nuevo curso confirmado' : 'Nuevo turno confirmado',
       html: masajistaHTML,
     });
-
     console.log("📧 Email enviado al masajista");
 
     res.status(201).json({ message: 'Confirmación guardada y mails enviados', turno: nuevo });
