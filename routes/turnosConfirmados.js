@@ -3,7 +3,6 @@ import TurnoConfirmado from '../models/TurnoConfirmado.js';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 
-
 dotenv.config();
 const router = express.Router();
 
@@ -13,84 +12,120 @@ router.get('/', async (req, res) => {
     const confirmados = await TurnoConfirmado.find().sort({ fechaCompra: -1 });
     res.json(confirmados);
   } catch (error) {
+    console.error("❌ Error al obtener turnos confirmados:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Guardar turno confirmado
+// Guardar turno confirmado o curso
 router.post('/', async (req, res) => {
-   console.log("📥 POST recibido en /api/turnos-confirmados");
+  console.log("📥 POST recibido en /api/turnos-confirmados");
   console.log("📦 Body recibido:", req.body);
-  const { nombre, email, tipo, date, time } = req.body;
 
-  console.log("👀 Campos recibidos:");
-console.log("nombre:", nombre);
-console.log("email:", email);
-console.log("tipo:", tipo);
-console.log("date:", date);
-console.log("time:", time);
-  if (!nombre || !email || !tipo || !date || !time) {
-  return res.status(400).json({ error: 'Faltan datos obligatorios' });
-}
+  const { nombre, email, tipo, date, time, nombre_curso } = req.body;
+
+  // Validación base
+  if (!nombre || !email || !tipo) {
+    return res.status(400).json({ error: 'Faltan datos obligatorios (nombre, email o tipo)' });
+  }
 
   try {
-  const nuevo = new TurnoConfirmado({
+    // Crear objeto para guardar en la DB
+    const nuevo = new TurnoConfirmado({
       nombre,
       email,
-      tipo,         // ahora se llama "tipo", no "producto"
-      date,         // ahora se llama "date", no "fecha"
-      time,         // ahora se llama "time", no "hora"
+      tipo,
+      date: tipo === "curso" ? null : date,
+      time: tipo === "curso" ? null : time,
       fechaCompra: new Date(),
       metodo: 'Mercado Pago',
     });
 
     await nuevo.save();
-// Configura tu transporte de correo (ejemplo con Gmail)
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_FROM,     // ejemplo: brunogmedicina@gmail.com
-    pass: process.env.EMAIL_PASSWORD,     // app password, no tu contraseña real
-  },
-});
 
-// Email al cliente
-await transporter.sendMail({
-  from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
-  to: email,
-  subject: 'Confirmación de tu turno',
-  html: `
-    <p>Hola ${nombre},</p>
-    <p>Tu turno fue confirmado para el día <strong>${date}</strong> a las <strong>${time}</strong>.</p>
-    <p>Tipo de masaje: <strong>${tipo}</strong></p>
-    <p>Gracias por confiar en nosotros 🙌</p>
+    // Configurar transporte Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_FROM,
+        pass: process.env.EMAIL_PASSWORD, // App Password
+      },
+    });
 
-    <p>📱 WhatsApp de contacto:+5492617242768</p>
-    <p>📍 Ubicación:Paraná 1132, GC, MDZ.</p>
-  `,
-});
+    // 📧 Definir contenido según sea curso o turno
+    let clienteHTML = "";
+    let masajistaHTML = "";
 
-// Email al masajista
-await transporter.sendMail({
-  from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
-  to: process.env.EMAIL_FROM, // puede ser tu correo personal
-  subject: 'Nuevo turno confirmado',
-  html: `
-    <p>Nuevo turno confirmado:</p>
-    <ul>
-      <li><strong>Nombre:</strong> ${nombre}</li>
-      <li><strong>Email:</strong> ${email}</li>
-      <li><strong>Tipo:</strong> ${tipo}</li>
-      <li><strong>Fecha:</strong> ${date}</li>
-      <li><strong>Hora:</strong> ${time}</li>
-    </ul>
-   
-  `,
-});
+    if (tipo === "curso") {
+      clienteHTML = `
+        <p>Hola ${nombre},</p>
+        <p>Tu inscripción al curso <strong>${nombre_curso || "Curso"}</strong> fue confirmada ✅</p>
+        <p>Gracias por confiar en nosotros 🙌</p>
+        <p>📱 WhatsApp de contacto: +5492617242768</p>
+        <p>📍 Ubicación: Paraná 1132, GC, MDZ.</p>
+      `;
 
+      masajistaHTML = `
+        <p>Nuevo curso confirmado:</p>
+        <ul>
+          <li><strong>Nombre:</strong> ${nombre}</li>
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Curso:</strong> ${nombre_curso || "Curso"}</li>
+        </ul>
+        <p>📱 WhatsApp de contacto: +5492617242768</p>
+        <p>📍 Ubicación: Paraná 1132, GC, MDZ.</p>
+      `;
+    } else {
+      if (!date || !time) {
+        return res.status(400).json({ error: 'Faltan fecha u hora para el turno' });
+      }
 
-    res.status(201).json({ message: 'Turno confirmado guardado', turno: nuevo });
+      clienteHTML = `
+        <p>Hola ${nombre},</p>
+        <p>Tu turno fue confirmado para el día <strong>${date}</strong> a las <strong>${time}</strong>.</p>
+        <p>Tipo de masaje: <strong>${tipo}</strong></p>
+        <p>Gracias por confiar en nosotros 🙌</p>
+        <p>📱 WhatsApp de contacto: +5492617242768</p>
+        <p>📍 Ubicación: Paraná 1132, GC, MDZ.</p>
+      `;
+
+      masajistaHTML = `
+        <p>Nuevo turno confirmado:</p>
+        <ul>
+          <li><strong>Nombre:</strong> ${nombre}</li>
+          <li><strong>Email:</strong> ${email}</li>
+          <li><strong>Tipo:</strong> ${tipo}</li>
+          <li><strong>Fecha:</strong> ${date}</li>
+          <li><strong>Hora:</strong> ${time}</li>
+        </ul>
+      `;
+    }
+
+    // Email al cliente
+    await transporter.sendMail({
+      from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: tipo === "curso" ? 'Confirmación de tu curso' : 'Confirmación de tu turno',
+      html: clienteHTML,
+    });
+
+    console.log("📧 Email enviado al cliente:", email);
+
+    // Email al masajista
+    await transporter.sendMail({
+      from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
+      to: process.env.EMAIL_FROM,
+      subject: tipo === "curso" ? 'Nuevo curso confirmado' : 'Nuevo turno confirmado',
+      html: masajistaHTML,
+    });
+
+    console.log("📧 Email enviado al masajista");
+
+    res.status(201).json({ message: 'Confirmación guardada y mails enviados', turno: nuevo });
   } catch (error) {
+    console.error("❌ Error en /api/turnos-confirmados:", error);
     res.status(500).json({ error: error.message });
   }
 });
