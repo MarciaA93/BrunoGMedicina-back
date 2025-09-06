@@ -43,6 +43,7 @@ router.post('/', async (req, res) => {
     });
 
     await nuevo.save();
+    console.log("💾 Turno/curso guardado en MongoDB:", nuevo._id);
 
     // 📧 Definir contenido según sea curso o turno
     let clienteHTML = "";
@@ -91,23 +92,32 @@ router.post('/', async (req, res) => {
       `;
     }
 
-    // Email al cliente
-    await resend.emails.send({
-      from: 'Bruno G Medicina China <onboarding@resend.dev>',
-      to: email,
-      subject: tipo === "curso" ? 'Confirmación de tu curso' : 'Confirmación de tu turno',
-      html: clienteHTML,
-    });
-    console.log("📧 Email enviado al cliente:", email);
+    // --- Enviar emails ---
+    try {
+      // Email al cliente
+      await resend.emails.send({
+        from: 'Bruno G Medicina China <onboarding@resend.dev>',
+        to: email,
+        subject: tipo === "curso" ? 'Confirmación de tu curso' : 'Confirmación de tu turno',
+        html: clienteHTML,
+      });
+      console.log("📧 Email enviado al cliente:", email);
+    } catch (err) {
+      console.error("⚠️ Error enviando mail al cliente:", err.message);
+    }
 
-    // Email al masajista
-    await resend.emails.send({
-      from: 'Bruno G Medicina China <onboarding@resend.dev>',
-      to: process.env.EMAIL_FROM, // tu mail personal
-      subject: tipo === "curso" ? 'Nuevo curso confirmado' : 'Nuevo turno confirmado',
-      html: masajistaHTML,
-    });
-    console.log("📧 Email enviado al masajista");
+    try {
+      // Email al masajista
+      await resend.emails.send({
+        from: 'Bruno G Medicina China <onboarding@resend.dev>',
+        to: process.env.EMAIL_FROM, // tu mail personal
+        subject: tipo === "curso" ? 'Nuevo curso confirmado' : 'Nuevo turno confirmado',
+        html: masajistaHTML,
+      });
+      console.log("📧 Email enviado al masajista:", process.env.EMAIL_FROM);
+    } catch (err) {
+      console.error("⚠️ Error enviando mail al masajista:", err.message);
+    }
 
     res.status(201).json({ message: 'Confirmación guardada y mails enviados', turno: nuevo });
   } catch (error) {

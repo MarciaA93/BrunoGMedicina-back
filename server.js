@@ -11,7 +11,7 @@ import preciosRoutes from './routes/preciosRoutes.js';
 import mercadopagoRoutes from './routes/mercadopago.js';
 import compraRoutes from './routes/compra.routes.js';
 import turnosConfirmadosRoutes from './routes/turnosConfirmados.js';
-import webhookRoutes from './routes/webhook.routes.js';
+import webhookRoutes from './routes/webhook.js'; 
 
 
 console.log('⏳ Iniciando servidor...');
@@ -73,14 +73,14 @@ mongoose.connect(process.env.MONGO_URI, {
   console.log('🟢 Conectado a MongoDB Atlas');
 
   // Rutas después de conexión exitosa
-  app.use('/api/admin', adminRoutes);
-  app.use('/api/precios', preciosRoutes);
-  app.use('/api/mercadopago', mercadopagoRoutes);
-  app.use('/api', compraRoutes);
-  app.use('/api/turnos', turnoRoutes);
-  app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
-  app.use('/api/precios-cursos', preciosCursosRoutes);
-  app.use('/api/mercadopago', webhookRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/precios', preciosRoutes);
+app.use('/api/mercadopago', mercadopagoRoutes);
+app.use('/api', compraRoutes);
+app.use('/api/turnos', turnoRoutes);
+app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
+app.use('/api/precios-cursos', preciosCursosRoutes);
+app.use('/api/webhook', webhookRoutes); // ✅ único webhook
 
   app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
