@@ -45,7 +45,7 @@ router.post("/create_preference", async (req, res) => {
         },
         auto_return: "approved",
         notification_url:
-          "https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook",
+          "https://brunogmedicina-back-production.up.railway.app/api/webhook",
         metadata: {
           nombre: String(nombre),
           email: String(email),
