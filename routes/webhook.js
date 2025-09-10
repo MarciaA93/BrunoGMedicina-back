@@ -14,6 +14,9 @@ const API_BASE_URL = process.env.API_BASE_URL || 'https://brunogmedicina-back-pr
 
 router.post('/webhook', express.json(), async (req, res) => {
   console.log('📩 Webhook recibido:', JSON.stringify(req.body, null, 2));
+  console.log('---------- WEBHOOK RECIBIDO ----------');
+  console.log('Query:', req.query);
+  console.log('Body:', req.body);
 
   const topic = req.query.topic || req.body.type;
   let paymentId = req.body.data?.id || req.body.data?.payment_id || req.body.id;
