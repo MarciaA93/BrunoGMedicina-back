@@ -114,6 +114,8 @@ router.post('/webhook', express.json(), async (req, res) => {
         tipo: metadata.tipo,
         date: metadata.date,
         time: metadata.time,
+        fechaCompra: new Date(),        // ahora se envía
+      metodo: 'Mercado Pago'  
       }),
     });
 

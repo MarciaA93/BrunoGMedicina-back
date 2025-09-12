@@ -50,13 +50,13 @@ router.post('/create_preference', async (req, res) => {
         },
         auto_return: "approved",
         notification_url: "https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook",
-        metadata: {
-          nombre: String(nombre),
-          email: String(email),
-          tipo: String(title),
-          date: String(date),
-          time: String(time)
-        }
+       metadata: {
+  nombre: String(nombre),
+  email: String(email),
+  tipo: String(title),
+  date: String(date),   // "2025-09-01"
+  time: String(time)    // "17:00"
+}
       }
     });
 
