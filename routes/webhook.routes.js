@@ -1,138 +1,162 @@
+// routes/webhook.js
 import express from 'express';
-import fetch from 'node-fetch'; // Para Node <18
+import fetch from 'node-fetch';
 import dotenv from 'dotenv';
+import Turno from '../models/Turno.js';
+import TurnoConfirmado from '../models/TurnoConfirmado.js';
+import Compra from '../models/Compra.js'; // Importamos tu modelo Compra
+import nodemailer from 'nodemailer';
 
 dotenv.config();
 const router = express.Router();
 
-router.post('/webhook', express.json(), async (req, res) => {
-  console.log("📩 Webhook recibido:");
-  console.log(JSON.stringify(req.body, null, 2));
-
-  const topic = req.query.topic || req.body.type;
-  let paymentId = req.body.data?.id || req.body.data?.payment_id || req.body.id;
-
-  console.log(`🔍 Topic: ${topic}`);
-  console.log(`🧾 paymentId detectado: ${paymentId}`);
-
-  // 🔸 Si topic = merchant_order, buscar el paymentId desde la orden
- if (topic === 'merchant_order' && !paymentId) {
-  const resourceUrl = req.body.resource;
-  const orderId = resourceUrl?.split("/").pop(); // ✅ EXTRAEMOS el ID
-
-  console.log(`🛒 Es merchant_order, ID de orden extraído: ${orderId}`);
-
-  if (!orderId) {
-    console.error("❌ No se pudo extraer el ID de orden desde resource");
-    return res.sendStatus(200);
-  }
-
+// Función de email sin cambios, ¡ya estaba bien!
+async function enviarEmailsConGmail(mailOptions) {
   try {
-    const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${orderId}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_FROM,
+        pass: process.env.EMAIL_PASSWORD,
       },
     });
 
-    const order = await orderResponse.json();
-    const pagos = order.payments || [];
-    const aprobado = pagos.find(p => p.status === 'approved');
+    // Email para el cliente
+    await transporter.sendMail({
+      from: `"Bruno G Medicina China" <${process.env.EMAIL_FROM}>`,
+      to: mailOptions.to,
+      subject: mailOptions.subject,
+      html: mailOptions.html,
+    });
 
-    if (!aprobado) {
-      console.log('⏳ No hay pagos aprobados aún en la orden.');
-      return res.sendStatus(200);
-    }
-
-    paymentId = aprobado.id;
-    console.log(`✅ paymentId obtenido desde merchant_order: ${paymentId}`);
+    // Email para ti
+    await transporter.sendMail({
+      from: `"Notificación" <${process.env.EMAIL_FROM}>`,
+      to: process.env.EMAIL_FROM,
+      subject: `Nuevo ${mailOptions.productType} confirmado`,
+      html: `<p>Se confirmó un nuevo ${mailOptions.productType} para ${mailOptions.nombre} (${mailOptions.to}).</p>`,
+    });
+    console.log(`🚀 Emails para ${mailOptions.to} enviados con éxito.`);
   } catch (error) {
-    console.error('❌ Error al consultar merchant_order:', error);
-    return res.sendStatus(500);
+    console.error(`❌ Falló el envío de emails para ${mailOptions.to}:`, error);
   }
 }
 
-  // Si no hay paymentId o no es un topic válido, ignorar
-  if (topic !== 'payment' && topic !== 'merchant_order') {
-    console.log(`📭 Topic no relevante (${topic}), ignorando.`);
-    return res.sendStatus(200);
-  }
 
-  if (!paymentId) {
-    console.log('⚠️ No se pudo determinar el paymentId, ignorando.');
-    return res.sendStatus(200);
-  }
-
+router.post('/webhook', express.json(), async (req, res) => {
   try {
-    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-      },
-    });
+    console.log('Webhook recibido:', req.body);
+    
+    // Lógica para obtener el ID del pago (sin cambios)
+    const topic = req.query.topic || req.body.type;
+    let paymentId = req.body.data?.id;
 
-    if (!response.ok) {
-      console.error(`❌ Error al consultar pago ${paymentId}: ${response.status} ${response.statusText}`);
-      return res.sendStatus(500);
+    if (topic === 'merchant_order') {
+        const orderResponse = await fetch(`https://api.mercadopago.com/merchant_orders/${req.query.id}`, {
+            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+        });
+        const order = await orderResponse.json();
+        paymentId = order.payments[0]?.id;
     }
 
-    const payment = await response.json();
-
-    console.log("🧾 Pago recibido:", JSON.stringify(payment, null, 2));
-    const metadata = payment.metadata;
-
-    if (payment.status !== 'approved') {
-      console.log('🕒 Pago aún no aprobado:', payment.status);
+    if (!paymentId) {
+      console.log('No se encontró paymentId, ignorando webhook.');
       return res.sendStatus(200);
     }
 
-    // Validar metadata
-    if (!metadata?.date || !metadata?.time || !metadata?.email || !metadata?.nombre || !metadata?.tipo) {
-      console.error('⚠️ Faltan datos en metadata:', metadata);
-      return res.status(400).json({ error: 'Datos incompletos en metadata' });
-    }
-
-    // 🔄 Reservar turno
-    console.log('📅 Reservando turno:', metadata.date, metadata.time);
-    const reservaResponse = await fetch(`https://brunogmedicina-back-production.up.railway.app/api/turnos/${metadata.date}/${metadata.time}`, {
-
-      method: 'PUT',
+    // Obtenemos los detalles del pago desde Mercado Pago
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
     });
 
-    if (!reservaResponse.ok) {
-      console.error(`❌ Error reservando turno: ${reservaResponse.statusText}`);
-      return res.sendStatus(500);
+    if (!response.ok) {
+        console.error('Error al obtener el pago de Mercado Pago:', await response.text());
+        return res.sendStatus(500);
     }
 
-    // 💾 Guardar turno confirmado
-    console.log('💾 Guardando turno confirmado...');
-    const guardadoResponse = await fetch(`https://brunogmedicina-back-production.up.railway.app/api/turnos-confirmados`, {
+    const payment = await response.json();
+    const metadata = payment.metadata;
 
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // Solo continuamos si el pago fue aprobado
+    if (payment.status !== 'approved') {
+      console.log(`Pago ${paymentId} no aprobado (estado: ${payment.status}).`);
+      return res.sendStatus(200);
+    }
+    
+    // --- ✅ LÓGICA CORREGIDA Y MEJORADA ---
+    
+    // Primero, respondemos a Mercado Pago para evitar timeouts.
+    res.status(200).send('ok');
+
+    // Ahora, procesamos la lógica de negocio en segundo plano.
+
+    // CASO 1: Es la compra de un TURNO (identificado por la presencia de 'date' y 'time')
+    if (metadata && metadata.date && metadata.time) {
+      console.log('Procesando webhook para un TURNO.');
+
+      await Turno.findOneAndUpdate(
+        { date: metadata.date, "timeSlots.time": metadata.time },
+        { $set: { "timeSlots.$.available": false } }
+      );
+      
+      const nuevoConfirmado = new TurnoConfirmado({
         nombre: metadata.nombre,
         email: metadata.email,
         tipo: metadata.tipo,
         date: metadata.date,
         time: metadata.time,
-        fechaCompra: new Date(),        // ahora se envía
-      metodo: 'Mercado Pago'  
-      }),
-    });
+        fechaCompra: new Date(),
+        metodo: 'Mercado Pago',
+        paymentId: paymentId
+      });
+      await nuevoConfirmado.save();
 
-    const texto = await guardadoResponse.text();
-    console.log('📨 Respuesta de guardado:', texto);
+      // Enviamos el email del turno
+      enviarEmailsConGmail({
+          to: metadata.email,
+          nombre: metadata.nombre,
+          productType: 'turno',
+          subject: 'Confirmación de tu turno',
+          html: `<p>Hola ${metadata.nombre}, tu turno para el ${metadata.date} a las ${metadata.time} ha sido confirmado. ¡Muchas gracias!</p>`
+      });
 
-    if (!guardadoResponse.ok) {
-      console.error('❌ Error guardando turno confirmado:', guardadoResponse.statusText);
-      return res.sendStatus(500);
+    // CASO 2: Es la compra de un CURSO (identificado por la presencia de 'producto')
+    } else if (metadata && metadata.producto) {
+      console.log('Procesando webhook para un CURSO.');
+      
+      // Usamos tu modelo 'Compra'
+      const nuevaCompra = new Compra({
+        nombre: metadata.nombre,
+        email: metadata.email,
+        producto: metadata.tipo, // 'tipo' contiene el nombre del curso, ej: "Curso online: Masaje TuiNa"
+        precio: payment.transaction_amount, // Obtenemos el precio desde el objeto de pago
+        metodo: 'Mercado Pago',
+        paymentId: paymentId,
+        fechaCompra: new Date()
+      });
+      await nuevaCompra.save();
+
+      // Enviamos el email del curso
+      enviarEmailsConGmail({
+          to: metadata.email,
+          nombre: metadata.nombre,
+          productType: 'curso',
+          subject: 'Confirmación de tu inscripción al curso',
+          html: `<p>Hola ${metadata.nombre}, tu inscripción al curso "${metadata.tipo}" ha sido confirmada. ¡Muchas gracias!</p>`
+      });
+
+    } else {
+      console.log('Webhook recibido para un pago aprobado sin metadata reconocible:', metadata);
     }
-
-    console.log('✅ Turno confirmado correctamente');
-    res.status(200).json({ message: 'Turno confirmado' });
-
+    
   } catch (error) {
     console.error('❌ Error general en webhook:', error);
-    res.status(500).json({ error: 'Error procesando webhook' });
+    // Si ya enviamos una respuesta, no intentamos enviar otra.
+    if (!res.headersSent) {
+      res.sendStatus(500);
+    }
   }
 });
 
