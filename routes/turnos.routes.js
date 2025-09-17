@@ -62,6 +62,22 @@ router.get('/disponibles', async (req, res) => {
   }
 });
 
+// --- ✅ RUTA AÑADIDA AQUÍ ---
+// Obtener los horarios para una fecha específica
+router.get('/:fecha', async (req, res) => {
+  try {
+    const turno = await Turno.findOne({ date: req.params.fecha });
+    if (turno) {
+      res.json(turno);
+    } else {
+      // Si no hay turnos cargados para ese día, devolvemos un 404 para que el frontend sepa que no hay horarios.
+      res.status(404).json({ message: 'No se encontraron turnos para esa fecha' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Error al obtener los turnos' });
+  }
+});
+
 
 // Reservar un turno (poner "available: false")
 router.put('/:date/:time', async (req, res) => {
@@ -88,7 +104,5 @@ router.put('/:date/:time', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
-
 
 export default router;
