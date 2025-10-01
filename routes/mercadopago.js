@@ -6,28 +6,21 @@ import dotenv from 'dotenv';
 dotenv.config();
 const router = express.Router();
 
+// 1. Inicialización del cliente de Mercado Pago (¡Correcto!)
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 
-
 const preference = new Preference(client);
 
+// RUTA PARA TURNOS (con back_urls dinámicas)
 router.post('/create_preference', async (req, res) => {
-  console.log("📥 Datos recibidos en body:", req.body); // DEBUG
+  console.log("📥 Datos recibidos en body (Turno):", req.body);
 
   const { title, unit_price, quantity, nombre, email, date, time } = req.body;
 
-  // Validar campos obligatorios
-  if (!title) console.error("❌ Falta title");
-  if (!unit_price) console.error("❌ Falta unit_price");
-  if (!quantity) console.error("❌ Falta quantity");
-  if (!nombre) console.error("❌ Falta nombre");
-  if (!email) console.error("❌ Falta email");
-  if (!date) console.error("❌ Falta date");
-  if (!time) console.error("❌ Falta time");
-
   if (!title || !unit_price || !quantity || !nombre || !email || !date || !time) {
+    console.error("❌ Faltan datos obligatorios para el turno");
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
 
@@ -43,40 +36,39 @@ router.post('/create_preference', async (req, res) => {
         payer: {
           email: String(email),
         },
+        // --- CAMBIO: Usamos una variable de entorno para las URLs de redirección ---
         back_urls: {
-          success: "https://brunomtch.com/success",
-          failure: "https://brunomtch.com/failure",
-          pending: "https://brunomtch.com/pending"
+          success: `${process.env.FRONTEND_URL}/success`,
+          failure: `${process.env.FRONTEND_URL}/failure`, // Asegúrate de tener esta página en tu frontend si la necesitas
+          pending: `${process.env.FRONTEND_URL}/pending`  // Opcional
         },
         auto_return: "approved",
-        notification_url: "https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook",
-       metadata: {
-  nombre: String(nombre),
-  email: String(email),
-  tipo: String(title),
-  date: String(date),   // "2025-09-01"
-  time: String(time)    // "17:00"
-}
+        notification_url: `https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook`,
+        metadata: {
+          nombre: String(nombre),
+          email: String(email),
+          tipo: String(title),
+          date: String(date),
+          time: String(time)
+        }
       }
     });
 
-    console.log('✅ Resultado de preferencia:', result);
+    console.log('✅ Preferencia de Turno creada:', result);
     res.status(200).json({ init_point: result.init_point });
 
   } catch (error) {
-    console.error('❌ Error al crear preferencia:', error.message || error);
+    console.error('❌ Error al crear preferencia de Turno:', error.message || error);
     res.status(500).json({ error: 'Error al generar preferencia' });
   }
 });
 
-// RUTA NUEVA: Específica para la venta de cursos
+// RUTA PARA CURSOS (Corregida y con back_urls dinámicas)
 router.post('/create_course_preference', async (req, res) => {
   console.log("📥 Datos recibidos para CURSO:", req.body);
 
-  // 1. Recibimos solo los datos necesarios para un curso
   const { title, unit_price, quantity, nombre, email } = req.body;
 
-  // 2. Validamos solo esos campos
   if (!title || !unit_price || !quantity || !nombre || !email) {
     console.error("❌ Faltan datos para la preferencia del curso");
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
@@ -94,20 +86,20 @@ router.post('/create_course_preference', async (req, res) => {
         payer: {
           email: String(email),
         },
+        // --- CAMBIO: Usamos la misma variable de entorno y la página /success existente ---
         back_urls: {
-          // Puedes crear páginas de éxito/falla específicas para cursos si quieres
-          success: "https://brunomtch.com/success-curso",
-          failure: "https://brunomtch.com/failure-curso",
-          pending: "https://brunomtch.com/pending"
+          success: `${process.env.FRONTEND_URL}/success`,
+          failure: `${process.env.FRONTEND_URL}/failure`,
+          pending: `${process.env.FRONTEND_URL}/pending`
         },
         auto_return: "approved",
-        notification_url: "https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook",
-        // 3. El metadata ahora es específico para el curso
+        notification_url: `https://brunogmedicina-back-production.up.railway.app/api/mercadopago/webhook`,
+        // --- CAMBIO CLAVE: Ajustamos los metadatos para que coincidan con el webhook ---
         metadata: {
+          producto: 'curso', // Esta es la clave que tu webhook busca para identificar un curso
           nombre: String(nombre),
           email: String(email),
-          tipo: 'curso', // Identificamos que es un curso
-          nombre_curso: String(title)
+          tipo: String(title) // Aquí va el nombre del curso, que el webhook guardará
         }
       }
     });
