@@ -4,7 +4,7 @@ dotenv.config();
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
-import preciosCursosRoutes from './routes/preciosCursos.routes.js';
+
 import turnoRoutes from './routes/turnos.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import preciosRoutes from './routes/preciosRoutes.js';
@@ -72,15 +72,13 @@ mongoose.connect(process.env.MONGO_URI, {
 .then(() => {
   console.log('🟢 Conectado a MongoDB Atlas');
 
-  // Rutas después de conexión exitosa
   app.use('/api/admin', adminRoutes);
   app.use('/api/precios', preciosRoutes);
   app.use('/api/mercadopago', mercadopagoRoutes);
   app.use('/api', compraRoutes);
   app.use('/api/turnos', turnoRoutes);
   app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
-  app.use('/api/precios-cursos', preciosCursosRoutes);
-  app.use('/api/mercadopago', webhookRoutes);
+  app.use('/api/webhook', webhookRoutes); // ✅ corregido
 
   app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
