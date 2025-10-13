@@ -59,3 +59,8 @@ export const reservarHorario = async (req, res) => {
     res.status(500).json({ message: 'Error del servidor al reservar horario' });
   }
 };
+
+export const recibirWebhook = async (req, res) => {
+  console.log("📩 Webhook recibido:", req.body);
+  res.sendStatus(200);
+};

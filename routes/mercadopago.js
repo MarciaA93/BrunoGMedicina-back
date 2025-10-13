@@ -1,6 +1,6 @@
 // routes/mercadopago.js
 import express from 'express';
-import { MercadoPagoConfig, Preference } from 'mercadopago';
+import { MercadoPagoConfig, Preference , recibirWebhook } from 'mercadopago';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -65,6 +65,9 @@ router.post('/create_preference', async (req, res) => {
   }
 });
 
+// ✅ ESTE es el endpoint que te falta
+router.post("/webhook", recibirWebhook);
+
 // RUTA PARA CURSOS (Corregida y con back_urls dinámicas)
 router.post('/create_course_preference', async (req, res) => {
   console.log("📥 Datos recibidos para CURSO:", req.body);
@@ -75,6 +78,8 @@ router.post('/create_course_preference', async (req, res) => {
     console.error("❌ Faltan datos para la preferencia del curso");
     return res.status(400).json({ error: 'Faltan datos obligatorios' });
   }
+
+ 
 
   try {
     const result = await preference.create({
