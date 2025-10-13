@@ -1,5 +1,4 @@
-// routes/webhook.js (con LOGS detallados)
-
+// routes/webhook.js (CON LOGS DETALLADOS)
 import express from 'express';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
@@ -14,47 +13,44 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 const EMAIL_BRUNO = process.env.EMAIL_FROM;
 
-// ---------------------------
-// Función para enviar correos
-// ---------------------------
+// ------------------------------------------
+// Función auxiliar para enviar emails
+// ------------------------------------------
 async function enviarEmail(opciones, contexto = 'General') {
   try {
-    console.log(`📤 Intentando enviar email (${contexto}) → ${opciones.to}`);
+    console.log(`📧 Enviando email (${contexto}) → ${opciones.to}`);
     await resend.emails.send(opciones);
     console.log(`✅ Email enviado con éxito (${contexto}) → ${opciones.to}`);
   } catch (error) {
-    console.error(`❌ Error al enviar email (${contexto}) → ${opciones.to}:`, error.message);
+    console.error(`❌ Error al enviar email (${contexto}):`, error.message);
   }
 }
 
-// ---------------------------
-// Lógica de Turno
-// ---------------------------
+// ------------------------------------------
+// Procesar turno confirmado
+// ------------------------------------------
 async function procesarTurno(metadata, paymentId) {
-  console.log(`🔹 Entrando a procesarTurno para ${metadata.nombre} (${metadata.email})`);
-  console.log('🧩 Metadata recibida:', metadata);
+  console.log(`⚙️ Procesando turno... PaymentID=${paymentId}`);
+  console.log('🧠 Metadata recibida:', metadata);
 
   const existente = await TurnoConfirmado.findOne({ paymentId });
   if (existente) {
-    console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}, ignorando.`);
+    console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
     return;
   }
 
-  console.log('🔍 Buscando y bloqueando turno...');
-  const resultadoUpdate = await Turno.findOneAndUpdate(
+  console.log(`🔒 Bloqueando turno ${metadata.date} ${metadata.time}`);
+  const resultado = await Turno.findOneAndUpdate(
     { date: metadata.date, "timeSlots.time": metadata.time },
-    { $set: { "timeSlots.$.available": false } },
-    { new: true }
+    { $set: { "timeSlots.$.available": false } }
   );
 
-  if (!resultadoUpdate) {
-    console.error(`❌ No se encontró turno para ${metadata.date} ${metadata.time}`);
+  if (!resultado) {
+    console.log(`⚠️ No se encontró el turno en la base de datos.`);
   } else {
-    console.log(`✅ Turno bloqueado correctamente en DB → ${metadata.date} ${metadata.time}`);
+    console.log(`✅ Turno bloqueado correctamente.`);
   }
 
-  // Guardar turno confirmado
-  console.log('💾 Guardando TurnoConfirmado...');
   const nuevoConfirmado = new TurnoConfirmado({
     nombre: metadata.nombre,
     email: metadata.email,
@@ -66,9 +62,8 @@ async function procesarTurno(metadata, paymentId) {
     paymentId
   });
   await nuevoConfirmado.save();
-  console.log('✅ TurnoConfirmado guardado en la base de datos.');
+  console.log(`💾 Turno confirmado guardado correctamente en la BD.`);
 
-  // Envío de mails
   await enviarEmail({
     from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
     to: metadata.email,
@@ -86,113 +81,96 @@ async function procesarTurno(metadata, paymentId) {
     from: 'Notificación de Turno <notificaciones@brunomtch.com>',
     to: EMAIL_BRUNO,
     subject: `Nuevo Turno Confirmado: ${metadata.tipo}`,
-    html: `<p>Se confirmó un turno para ${metadata.nombre} (${metadata.email}).</p>
-           <p>📅 ${metadata.date} - 🕒 ${metadata.time}</p>`
+    html: `<p>Se confirmó un turno para ${metadata.nombre} (${metadata.email}).</p>`
   }, 'Turno - Cliente');
-
-  console.log(`✅ Proceso completo de turno finalizado para ${metadata.email}`);
 }
 
-// ---------------------------
-// Lógica de Curso (sin cambios)
-// ---------------------------
+// ------------------------------------------
+// Procesar curso (compra)
+// ------------------------------------------
 async function procesarCurso(metadata, payment) {
-  const paymentId = payment.id;
-  const nombreCurso = metadata.tipo || metadata.producto;
+  console.log(`⚙️ Procesando compra de curso... PaymentID=${payment.id}`);
+  console.log('🧠 Metadata recibida:', metadata);
 
-  console.log(`🔹 Entrando a procesarCurso: ${nombreCurso}`);
-  const existente = await Compra.findOne({ paymentId });
+  const existente = await Compra.findOne({ paymentId: payment.id });
   if (existente) {
-    console.log(`⚠️ Curso ya procesado para paymentId=${paymentId}, ignorando.`);
+    console.log(`⚠️ Curso ya procesado para paymentId=${payment.id}`);
     return;
   }
 
   const nuevaCompra = new Compra({
     nombre: metadata.nombre,
     email: metadata.email,
-    producto: nombreCurso,
+    producto: metadata.tipo || metadata.producto,
     precio: payment.transaction_amount,
     estado: payment.status_detail,
     fechaCompra: new Date(),
-    paymentId: paymentId
+    paymentId: payment.id
   });
+
   await nuevaCompra.save();
-  console.log(`✅ Compra guardada para ${metadata.email}`);
+  console.log(`💾 Compra guardada correctamente en la BD.`);
 
   await enviarEmail({
     from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
     to: metadata.email,
-    subject: `✅ Confirmación de tu inscripción: ${nombreCurso}`,
-    html: `
-      <p>Hola ${metadata.nombre}, tu inscripción al curso <strong>${nombreCurso}</strong> fue confirmada.</p>
-    `
+    subject: `✅ Confirmación de tu inscripción: ${metadata.tipo || metadata.producto}`,
+    html: `<p>Hola ${metadata.nombre}, tu inscripción ha sido confirmada con éxito.</p>`
   }, 'Curso - Alumno');
 
   await enviarEmail({
     from: 'Notificación de Curso <notificaciones@brunomtch.com>',
     to: EMAIL_BRUNO,
-    subject: `💰 Nueva Venta de Curso: ${nombreCurso}`,
-    html: `<p>${metadata.nombre} (${metadata.email}) compró ${nombreCurso}.</p>`
+    subject: `💰 Nueva Venta de Curso`,
+    html: `<p>Venta confirmada: ${metadata.nombre} (${metadata.email})</p>`
   }, 'Curso - Cliente');
 }
 
-// ---------------------------
-// Webhook principal
-// ---------------------------
+// ------------------------------------------
+// WEBHOOK PRINCIPAL
+// ------------------------------------------
 router.post('/webhook', express.json(), async (req, res) => {
   try {
-    console.log('📩 Webhook recibido:', JSON.stringify(req.body, null, 2));
-
+    console.log('📩 Webhook recibido →', JSON.stringify(req.body, null, 2));
     const paymentId = req.body.data?.id || req.query.id;
     const topic = req.body.type || req.query.topic;
-    console.log(`🔎 Topic: ${topic} | PaymentID: ${paymentId}`);
 
     if (topic !== 'payment' || !paymentId) {
-      console.log(`⚠️ Webhook ignorado (topic: ${topic}, paymentId: ${paymentId})`);
+      console.log(`⚠️ Webhook ignorado: tipo=${topic}, id=${paymentId}`);
       return res.sendStatus(200);
     }
 
-    console.log(`🔗 Consultando pago ${paymentId} en Mercado Pago...`);
+    console.log(`🔍 Consultando pago ${paymentId} en Mercado Pago...`);
     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` },
+      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` }
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Error al obtener pago ${paymentId}:`, errorText);
+      console.error(`❌ Error al obtener pago:`, errorText);
       return res.sendStatus(200);
     }
 
     const payment = await response.json();
-    console.log('💳 Pago obtenido de MP:', {
-      status: payment.status,
-      detail: payment.status_detail,
-      email: payment.payer?.email,
-      amount: payment.transaction_amount
-    });
+    console.log(`✅ Pago consultado: ${payment.status} (${payment.status_detail})`);
 
     if (payment.status !== 'approved' || payment.status_detail !== 'accredited') {
-      console.log(`⚠️ Pago ${paymentId} aún no acreditado. Estado: ${payment.status_detail}`);
+      console.log(`⚠️ Pago aún no acreditado (${payment.status_detail}).`);
       return res.sendStatus(200);
     }
 
     const metadata = payment.metadata || {};
-    console.log('🧩 Metadata detectada en pago:', metadata);
-
     if (metadata.date && metadata.time) {
-      console.log('🩺 Detectado tipo: Turno');
       await procesarTurno(metadata, paymentId);
     } else if (metadata.producto || metadata.tipo) {
-      console.log('🎓 Detectado tipo: Curso');
       await procesarCurso(metadata, payment);
     } else {
-      console.log(`⚠️ Pago ${paymentId} aprobado, pero sin metadatos reconocidos.`);
+      console.log('⚠️ Pago sin metadatos reconocidos:', metadata);
     }
 
-    console.log(`✅ Webhook finalizado correctamente para pago ${paymentId}`);
     res.sendStatus(200);
   } catch (error) {
-    console.error('❌ Error general en webhook:', error);
+    console.error('💥 Error general en webhook:', error);
     if (!res.headersSent) res.sendStatus(500);
   }
 });
