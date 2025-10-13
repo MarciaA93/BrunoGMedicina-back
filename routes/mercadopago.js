@@ -43,7 +43,8 @@ router.post('/create_preference', async (req, res) => {
           pending: `${process.env.FRONTEND_URL}/pending`  // Opcional
         },
         auto_return: "approved",
-        notification_url: `https://brunogmedicina-back-production.up.railway.app/api/webhook`,
+        notification_url: process.env.MP_NOTIFICATION_URL || 'https://brunogmedicina-back-production.up.railway.app/api/webhook',
+
 
         metadata: {
           nombre: String(nombre),
@@ -94,7 +95,8 @@ router.post('/create_course_preference', async (req, res) => {
           pending: `${process.env.FRONTEND_URL}/pending`
         },
         auto_return: "approved",
-        notification_url: `https://brunogmedicina-back-production.up.railway.app/api/webhook`,
+        notification_url: process.env.MP_NOTIFICATION_URL || 'https://brunogmedicina-back-production.up.railway.app/api/webhook',
+
 
         // --- CAMBIO CLAVE: Ajustamos los metadatos para que coincidan con el webhook ---
         metadata: {
