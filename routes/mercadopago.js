@@ -1,8 +1,7 @@
-// routes/mercadopago.js
 import express from 'express';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import dotenv from 'dotenv';
-import webhookHandler from './webhook.routes.js'; // Importamos tu webhook existente
+import { handleWebhook } from './webhook.routes.js'; // Importamos la función handler
 
 dotenv.config();
 const router = express.Router();
@@ -11,7 +10,6 @@ const router = express.Router();
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
-
 const preference = new Preference(client);
 
 // -------------------
@@ -114,6 +112,6 @@ router.post('/create_course_preference', async (req, res) => {
 // -------------------
 // WEBHOOK DE MERCADO PAGO
 // -------------------
-router.post("/webhook", webhookHandler);
+router.post("/webhook", handleWebhook);
 
 export default router;

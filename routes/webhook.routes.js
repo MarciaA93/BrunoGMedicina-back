@@ -125,7 +125,54 @@ async function procesarCurso(metadata, payment) {
     html: `<p>Venta confirmada: ${metadata.nombre} (${metadata.email})</p>`
   }, 'Curso - Cliente');
 }
+// ------------------------------------------
+// Exportar la función handler para usar en mercadopago.js
+// ------------------------------------------
+export const handleWebhook = async (req, res) => {
+  try {
+    console.log('📩 Webhook recibido →', JSON.stringify(req.body, null, 2));
+    const paymentId = req.body.data?.id || req.query.id;
+    const topic = req.body.type || req.query.topic;
 
+    if (topic !== 'payment' || !paymentId) {
+      console.log(`⚠️ Webhook ignorado: tipo=${topic}, id=${paymentId}`);
+      return res.sendStatus(200);
+    }
+
+    console.log(`🔍 Consultando pago ${paymentId} en Mercado Pago...`);
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ Error al obtener pago:`, errorText);
+      return res.sendStatus(200);
+    }
+
+    const payment = await response.json();
+    console.log(`✅ Pago consultado: ${payment.status} (${payment.status_detail})`);
+
+    if (payment.status !== 'approved' || payment.status_detail !== 'accredited') {
+      console.log(`⚠️ Pago aún no acreditado (${payment.status_detail}).`);
+      return res.sendStatus(200);
+    }
+
+    const metadata = payment.metadata || {};
+    if (metadata.date && metadata.time) {
+      await procesarTurno(metadata, paymentId);
+    } else if (metadata.producto || metadata.tipo) {
+      await procesarCurso(metadata, payment);
+    } else {
+      console.log('⚠️ Pago sin metadatos reconocidos:', metadata);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('💥 Error general en webhook:', error);
+    if (!res.headersSent) res.sendStatus(500);
+  }
+}
 // ------------------------------------------
 // WEBHOOK PRINCIPAL
 // ------------------------------------------
