@@ -132,7 +132,7 @@ async function procesarCurso(metadata, payment) {
 export const handleWebhook = async (req) => {
   try {
     const paymentId = req.body.data?.id || req.query.id;
-    const topic = req.body.type || req.query.topic;
+    
 
     if (!paymentId) {
       console.log(`⚠️ Webhook ignorado: id faltante`);
@@ -175,7 +175,7 @@ export const handleWebhook = async (req) => {
 // ------------------------------------------
 // Ruta del webhook
 // ------------------------------------------
-router.post('/webhook', express.json(), (req, res) => {
+router.post('/', express.json(), (req, res) => {
   // Respondemos rápido a Mercado Pago
   res.sendStatus(200);
 

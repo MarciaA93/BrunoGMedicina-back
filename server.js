@@ -78,7 +78,7 @@ mongoose.connect(process.env.MONGO_URI, {
   app.use('/api', compraRoutes);
   app.use('/api/turnos', turnoRoutes);
   app.use('/api/turnos-confirmados', turnosConfirmadosRoutes);
-  app.use('/api/webhook', webhookRoutes); // ✅ corregido
+  app.use('/api/webhook', webhookRoutes);
 
   app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
