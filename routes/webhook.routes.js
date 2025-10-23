@@ -176,7 +176,9 @@ export const handleWebhook = async (req) => {
 // Ruta del webhook
 // ------------------------------------------
 router.post('/', express.json(), (req, res) => {
-  // Respondemos rápido a Mercado Pago
+  const requestId = Date.now() + '-' + Math.floor(Math.random() * 1000);
+  console.log(`📥 Webhook recibido [${requestId}]`, JSON.stringify(req.body));
+
   res.sendStatus(200);
 
   // Procesamos el webhook async
