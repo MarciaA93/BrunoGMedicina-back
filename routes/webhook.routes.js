@@ -1,4 +1,4 @@
-// routes/webhook.js (VERSIÓN FINAL)
+// routes/webhook.js (VERSIÓN FINAL - con control de duplicados)
 import express from 'express';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
@@ -33,29 +33,28 @@ async function procesarTurno(metadata, paymentId) {
   console.log(`⚙️ Procesando turno... PaymentID=${paymentId}`);
   console.log('🧠 Metadata recibida:', metadata);
 
- const existente = await TurnoConfirmado.findOne({
-  email: metadata.email,
-  date: metadata.date,
-  time: metadata.time
-});
+  // 🔹 Verificar duplicado por paymentId primero
+  const existePayment = await TurnoConfirmado.findOne({ paymentId });
+  if (existePayment) {
+    console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
+    return;
+  }
 
-if (existente) {
-  console.log(`⚠️ Turno ya procesado para ${metadata.email} ${metadata.date} ${metadata.time}`);
-  return;
-}
-
-  console.log(`🔒 Bloqueando turno ${metadata.date} ${metadata.time}`);
+  // 🔹 Bloqueo atómico: solo bloquea si estaba disponible
   const resultado = await Turno.findOneAndUpdate(
-    { date: metadata.date, "timeSlots.time": metadata.time },
-    { $set: { "timeSlots.$.available": false } }
+    { date: metadata.date, "timeSlots.time": metadata.time, "timeSlots.available": true },
+    { $set: { "timeSlots.$.available": false } },
+    { new: true }
   );
 
   if (!resultado) {
-    console.log(`⚠️ No se encontró el turno en la base de datos.`);
+    console.log(`⚠️ Turno ya estaba bloqueado o no existe.`);
+    return;
   } else {
     console.log(`✅ Turno bloqueado correctamente.`);
   }
 
+  // 🔹 Guardar turno confirmado
   const nuevoConfirmado = new TurnoConfirmado({
     nombre: metadata.nombre,
     email: metadata.email,
@@ -69,6 +68,7 @@ if (existente) {
   await nuevoConfirmado.save();
   console.log(`💾 Turno confirmado guardado correctamente en la BD.`);
 
+  // 🔹 Enviar emails
   await enviarEmail({
     from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
     to: metadata.email,
@@ -175,7 +175,6 @@ export const handleWebhook = async (req) => {
     console.error('💥 Error general en webhook:', error);
   }
 };
-
 
 // ------------------------------------------
 // Ruta del webhook
