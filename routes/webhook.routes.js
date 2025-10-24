@@ -33,11 +33,16 @@ async function procesarTurno(metadata, paymentId) {
   console.log(`⚙️ Procesando turno... PaymentID=${paymentId}`);
   console.log('🧠 Metadata recibida:', metadata);
 
-  const existente = await TurnoConfirmado.findOne({ paymentId });
-  if (existente) {
-    console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
-    return;
-  }
+ const existente = await TurnoConfirmado.findOne({
+  email: metadata.email,
+  date: metadata.date,
+  time: metadata.time
+});
+
+if (existente) {
+  console.log(`⚠️ Turno ya procesado para ${metadata.email} ${metadata.date} ${metadata.time}`);
+  return;
+}
 
   console.log(`🔒 Bloqueando turno ${metadata.date} ${metadata.time}`);
   const resultado = await Turno.findOneAndUpdate(
@@ -138,7 +143,7 @@ export const handleWebhook = async (req) => {
       console.log(`⚠️ Webhook ignorado: topic=${topic}`);
       return;
     }
-    
+
     const paymentId = req.body.data?.id || req.query.id;
     
 
