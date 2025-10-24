@@ -131,6 +131,14 @@ async function procesarCurso(metadata, payment) {
 // ------------------------------------------
 export const handleWebhook = async (req) => {
   try {
+    const { topic, resource, data } = req.body;
+
+    // 🧠 Filtrar eventos que no sean de pago directo
+    if (topic && topic !== "payment") {
+      console.log(`⚠️ Webhook ignorado: topic=${topic}`);
+      return;
+    }
+    
     const paymentId = req.body.data?.id || req.query.id;
     
 
