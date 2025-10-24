@@ -136,17 +136,14 @@ async function procesarCurso(metadata, payment) {
 // ------------------------------------------
 export const handleWebhook = async (req) => {
   try {
-    const { topic, resource, data } = req.body;
-
-    // 🧠 Filtrar eventos que no sean de pago directo
-    if (topic && topic !== "payment") {
+    const { topic } = req.body;
+    
+    if (topic === 'merchant_order') {
       console.log(`⚠️ Webhook ignorado: topic=${topic}`);
-      return;
+      return; // ¡Nada de bloqueos ni envíos!
     }
 
     const paymentId = req.body.data?.id || req.query.id;
-    
-
     if (!paymentId) {
       console.log(`⚠️ Webhook ignorado: id faltante`);
       return;
@@ -165,14 +162,8 @@ export const handleWebhook = async (req) => {
 
     const payment = await response.json();
     console.log(`✅ Pago consultado: ${payment.status} (${payment.status_detail})`);
-    console.log('🧾 Payment completo:', payment);
-
-    if (payment.status !== 'approved' || payment.status_detail !== 'accredited') {
-      console.log(`⚠️ Pago aún no acreditado (${payment.status_detail}).`);
-      return;
-    }
-
     const metadata = payment.metadata || {};
+
     if (metadata.date && metadata.time) {
       await procesarTurno(metadata, paymentId);
     } else if (metadata.producto || metadata.tipo) {
@@ -184,6 +175,7 @@ export const handleWebhook = async (req) => {
     console.error('💥 Error general en webhook:', error);
   }
 };
+
 
 // ------------------------------------------
 // Ruta del webhook
