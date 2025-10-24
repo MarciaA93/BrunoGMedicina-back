@@ -16,9 +16,21 @@ const preference = new Preference(client);
 // RUTA PARA TURNOS
 // -------------------
 router.post('/create_preference', async (req, res) => {
+  const requestId = `${req.body.email}-${req.body.date}-${req.body.time}`;
+  console.log(`🆔 Nueva petición /create_preference (${requestId})`);
   console.log("📥 Datos recibidos en body (Turno):", req.body);
 
   const { title, unit_price, quantity, nombre, email, date, time } = req.body;
+  
+  // --- Protección contra doble click o reenvío rápido ---
+if (global.lastRequest && global.lastRequest.id === requestId) {
+  const diff = Date.now() - global.lastRequest.time;
+  if (diff < 3000) { // menos de 3 segundos
+    console.warn(`⚠️ Petición duplicada detectada (${requestId}), ignorando...`);
+    return res.status(429).json({ error: 'Petición duplicada detectada' });
+  }
+}
+global.lastRequest = { id: requestId, time: Date.now() };
 
   if (!title || !unit_price || !quantity || !nombre || !email || !date || !time) {
     console.error("❌ Faltan datos obligatorios para el turno");
