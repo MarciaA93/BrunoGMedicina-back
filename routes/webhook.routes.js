@@ -8,6 +8,8 @@ import Compra from '../models/Compra.js';
 import { Resend } from 'resend';
 
 dotenv.config();
+// Bloqueo temporal en memoria para evitar doble procesamiento simultáneo
+const procesandoPagos = new Set();
 const router = express.Router();
 const resend = new Resend(process.env.RESEND_API_KEY);
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
@@ -33,140 +35,177 @@ async function procesarTurno(metadata, paymentId) {
   console.log(`⚙️ Procesando turno... PaymentID=${paymentId}`);
   console.log('🧠 Metadata recibida:', metadata);
 
-  // 🔹 Verificar duplicado por paymentId primero
-  const existePayment = await TurnoConfirmado.findOne({ paymentId });
-  if (existePayment) {
-    console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
+  // 🔒 Evitar doble procesamiento simultáneo
+  if (procesandoPagos.has(paymentId)) {
+    console.log(`⏳ Pago ${paymentId} ya se está procesando (turno), ignorando duplicado.`);
     return;
   }
+  procesandoPagos.add(paymentId);
 
-  // 🔹 Bloqueo atómico: solo bloquea si estaba disponible
-  const resultado = await Turno.findOneAndUpdate(
-    { date: metadata.date, "timeSlots.time": metadata.time, "timeSlots.available": true },
-    { $set: { "timeSlots.$.available": false } },
-    { new: true }
-  );
+  try {
+    // 🔹 Verificar duplicado por paymentId primero
+    const existePayment = await TurnoConfirmado.findOne({ paymentId });
+    if (existePayment) {
+      console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
+      return;
+    }
 
-  if (!resultado) {
-    console.log(`⚠️ Turno ya estaba bloqueado o no existe.`);
-    return;
-  } else {
-    console.log(`✅ Turno bloqueado correctamente.`);
+    // 🔹 Bloqueo atómico: solo bloquea si estaba disponible
+    const resultado = await Turno.findOneAndUpdate(
+      { date: metadata.date, "timeSlots.time": metadata.time, "timeSlots.available": true },
+      { $set: { "timeSlots.$.available": false } },
+      { new: true }
+    );
+
+    if (!resultado) {
+      console.log(`⚠️ Turno ya estaba bloqueado o no existe.`);
+      return;
+    } else {
+      console.log(`✅ Turno bloqueado correctamente.`);
+    }
+
+    // 🔹 Guardar turno confirmado
+    const nuevoConfirmado = new TurnoConfirmado({
+      nombre: metadata.nombre,
+      email: metadata.email,
+      tipo: metadata.tipo,
+      date: metadata.date,
+      time: metadata.time,
+      fechaCompra: new Date(),
+      metodo: 'Mercado Pago',
+      paymentId
+    });
+    await nuevoConfirmado.save();
+    console.log(`💾 Turno confirmado guardado correctamente en la BD.`);
+
+    // 🔹 Enviar emails
+    await enviarEmail({
+      from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
+      to: metadata.email,
+      subject: 'Confirmación de tu turno',
+      html: `
+        <p>Hola ${metadata.nombre}, tu turno ha sido confirmado.</p>
+        <p>Día: <strong>${metadata.date}</strong> - Hora: <strong>${metadata.time}</strong></p>
+        <p>Tipo de masaje: <strong>${metadata.tipo}</strong></p>
+        <p>📱 WhatsApp: +5492617242768</p>
+        <p>📍 Ubicación: Paraná 1132, Godoy Cruz, Mendoza.</p>
+      `
+    }, 'Turno - Paciente');
+
+    await enviarEmail({
+      from: 'Notificación de Turno <notificaciones@brunomtch.com>',
+      to: EMAIL_BRUNO,
+      subject: `Nuevo Turno Confirmado: ${metadata.tipo}`,
+      html: `<p>Se confirmó un turno para ${metadata.nombre} (${metadata.email}).</p>`
+    }, 'Turno - Cliente');
+
+    console.log(`✅ Proceso completado correctamente para paymentId=${paymentId}`);
+  } catch (error) {
+    console.error('💥 Error procesando turno:', error);
+  } finally {
+    // 🔓 Liberar bloqueo aunque haya error
+    procesandoPagos.delete(paymentId);
   }
-
-  // 🔹 Guardar turno confirmado
-  const nuevoConfirmado = new TurnoConfirmado({
-    nombre: metadata.nombre,
-    email: metadata.email,
-    tipo: metadata.tipo,
-    date: metadata.date,
-    time: metadata.time,
-    fechaCompra: new Date(),
-    metodo: 'Mercado Pago',
-    paymentId
-  });
-  await nuevoConfirmado.save();
-  console.log(`💾 Turno confirmado guardado correctamente en la BD.`);
-
-  // 🔹 Enviar emails
-  await enviarEmail({
-    from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
-    to: metadata.email,
-    subject: 'Confirmación de tu turno',
-    html: `
-      <p>Hola ${metadata.nombre}, tu turno ha sido confirmado.</p>
-      <p>Día: <strong>${metadata.date}</strong> - Hora: <strong>${metadata.time}</strong></p>
-      <p>Tipo de masaje: <strong>${metadata.tipo}</strong></p>
-      <p>📱 WhatsApp: +5492617242768</p>
-      <p>📍 Ubicación: Paraná 1132, Godoy Cruz, Mendoza.</p>
-    `
-  }, 'Turno - Paciente');
-
-  await enviarEmail({
-    from: 'Notificación de Turno <notificaciones@brunomtch.com>',
-    to: EMAIL_BRUNO,
-    subject: `Nuevo Turno Confirmado: ${metadata.tipo}`,
-    html: `<p>Se confirmó un turno para ${metadata.nombre} (${metadata.email}).</p>`
-  }, 'Turno - Cliente');
 }
+// ------------------------------------------
+// Procesar curso (compra) — con control anti-doble
+// ------------------------------------------
 
-// ------------------------------------------
-// Procesar curso (compra)
-// ------------------------------------------
+
 async function procesarCurso(metadata, payment) {
-  console.log(`⚙️ Procesando compra de curso... PaymentID=${payment.id}`);
-  console.log('🧠 Metadata recibida:', metadata);
+  try {
+    const paymentId = payment.id;
+    console.log(`⚙️ Procesando compra de curso... PaymentID=${paymentId}`);
+    console.log('🧠 Metadata recibida:', metadata);
 
-  const existente = await Compra.findOne({ paymentId: payment.id });
-  if (existente) {
-    console.log(`⚠️ Curso ya procesado para paymentId=${payment.id}`);
-    return;
-  }
+    // 🔒 Evitar doble procesamiento simultáneo
+    if (procesandoPagos.has(paymentId)) {
+      console.log(`⏳ Pago ${paymentId} ya se está procesando, ignorando duplicado.`);
+      return;
+    }
+    procesandoPagos.add(paymentId);
 
-  const nuevaCompra = new Compra({
-    nombre: metadata.nombre,
-    email: metadata.email,
-    producto: metadata.tipo || metadata.producto,
-    precio: payment.transaction_amount,
-    estado: payment.status_detail,
-    fechaCompra: new Date(),
-    paymentId: payment.id
-  });
+    // 🔹 Evitar reprocesar si ya existe en BD
+    const existente = await Compra.findOne({ paymentId });
+    if (existente) {
+      console.log(`⚠️ Curso ya procesado previamente para paymentId=${paymentId}`);
+      return;
+    }
 
-  await nuevaCompra.save();
-  console.log(`💾 Compra guardada correctamente en la BD.`);
+    // 🔹 Guardar compra
+    const nuevaCompra = new Compra({
+      nombre: metadata.nombre,
+      email: metadata.email,
+      producto: metadata.tipo || metadata.producto,
+      precio: payment.transaction_amount,
+      estado: payment.status_detail,
+      fechaCompra: new Date(),
+      paymentId
+    });
 
- await enviarEmail({
-  from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
-  to: metadata.email,
-  subject: `✅ Confirmación de tu inscripción: ${metadata.tipo || metadata.producto}`,
-  html: `
-  <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
-    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-      <h2 style="color: #00796b; text-align: center;">¡Inscripción confirmada! 🎉</h2>
+    await nuevaCompra.save();
+    console.log(`💾 Compra guardada correctamente en la BD.`);
 
-      <p style="font-size: 16px; color: #333;">
-        Hola <strong>${metadata.nombre}</strong>,
-      </p>
+    // 🔹 Enviar emails
+    await enviarEmail({
+      from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
+      to: metadata.email,
+      subject: `✅ Confirmación de tu inscripción: ${metadata.tipo || metadata.producto}`,
+      html: `
+      <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h2 style="color: #00796b; text-align: center;">¡Inscripción confirmada! 🎉</h2>
 
-      <p style="font-size: 15px; color: #333; line-height: 1.5;">
-        Tu inscripción al curso <strong>${metadata.tipo || metadata.producto}</strong> ha sido confirmada con éxito.
-      </p>
+          <p style="font-size: 16px; color: #333;">
+            Hola <strong>${metadata.nombre}</strong>,
+          </p>
 
-      <p style="font-size: 15px; color: #333; line-height: 1.5;">
-        Ya podés acceder al material y recursos desde el siguiente enlace:
-      </p>
+          <p style="font-size: 15px; color: #333; line-height: 1.5;">
+            Tu inscripción al curso <strong>${metadata.tipo || metadata.producto}</strong> ha sido confirmada con éxito.
+          </p>
 
-      <div style="text-align: center; margin: 25px 0;">
-        <a href="https://drive.google.com/drive/folders/1fiQhOllmw8k7YE89UXzPucigUM5wUoqp?usp=drive_link"
-           style="background-color: #00796b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
-          Acceder al material del curso
-        </a>
+          <p style="font-size: 15px; color: #333; line-height: 1.5;">
+            Ya podés acceder al material y recursos desde el siguiente enlace:
+          </p>
+
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="https://drive.google.com/drive/folders/1fiQhOllmw8k7YE89UXzPucigUM5wUoqp?usp=drive_link"
+              style="background-color: #00796b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Acceder al material del curso
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #777; text-align: center;">
+            Si tenés alguna duda, podés responder a este correo o escribirnos a 
+            <a href="mailto:contacto@brunomtch.com" style="color: #00796b; text-decoration: none;">contacto@brunomtch.com</a>.
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="font-size: 13px; color: #999; text-align: center;">
+            © ${new Date().getFullYear()} Bruno G. Medicina China — Todos los derechos reservados.
+          </p>
+        </div>
       </div>
+      `
+    }, 'Capacitacion - Alumno');
 
-      <p style="font-size: 14px; color: #777; text-align: center;">
-        Si tenés alguna duda, podés responder a este correo o escribirnos a 
-        <a href="mailto:contacto@brunomtch.com" style="color: #00796b; text-decoration: none;">contacto@brunomtch.com</a>.
-      </p>
+    await enviarEmail({
+      from: 'Notificación de Curso <notificaciones@brunomtch.com>',
+      to: EMAIL_BRUNO,
+      subject: `💰 Nueva Venta de Curso`,
+      html: `<p>Venta confirmada: ${metadata.nombre} (${metadata.email})</p>`
+    }, 'Curso - Cliente');
 
-      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+    console.log(`✅ Proceso completado correctamente para paymentId=${paymentId}`);
+  } catch (error) {
+    console.error('💥 Error procesando curso:', error);
+  } finally {
+    // 🔓 Liberar bloqueo aunque haya error
+    procesandoPagos.delete(payment.id);
+  }
+};
 
-      <p style="font-size: 13px; color: #999; text-align: center;">
-        © ${new Date().getFullYear()} Bruno G. Medicina China — Todos los derechos reservados.
-      </p>
-    </div>
-  </div>
-  `
-}, 'Capacitacion - Alumno');
-
-
-  await enviarEmail({
-    from: 'Notificación de Curso <notificaciones@brunomtch.com>',
-    to: EMAIL_BRUNO,
-    subject: `💰 Nueva Venta de Curso`,
-    html: `<p>Venta confirmada: ${metadata.nombre} (${metadata.email})</p>`
-  }, 'Curso - Cliente');
-}
 
 // ------------------------------------------
 // Handler principal

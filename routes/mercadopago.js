@@ -4,7 +4,8 @@ import dotenv from 'dotenv';
 import { handleWebhook } from './webhook.routes.js'; // Importamos la función handler
 
 dotenv.config();
-const router = express.Router();
+const router = express.Router(); 
+
 
 // Inicialización del cliente de Mercado Pago
 const client = new MercadoPagoConfig({
@@ -88,6 +89,7 @@ router.post('/create_course_preference', async (req, res) => {
 
   try {
     const result = await preference.create({
+      
       body: {
         items: [{
           title: String(title),
