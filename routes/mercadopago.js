@@ -112,8 +112,15 @@ router.post('/create_course_preference', async (req, res) => {
       }
     });
 
-    console.log('✅ Preferencia de CURSO creada:', result);
-    res.status(200).json({ init_point: result.init_point });
+    const initPoint = result.init_point || result.response?.init_point;
+
+    if (!initPoint) {
+      console.error("⚠️ No se encontró init_point en la respuesta de Mercado Pago:", result);
+      return res.status(500).json({ error: 'No se pudo obtener el link de pago' });
+    }
+
+    console.log('✅ Preferencia de CURSO creada correctamente:', initPoint);
+    res.status(200).json({ init_point: initPoint });
 
   } catch (error) {
     console.error('❌ Error al crear preferencia de CURSO:', error.message || error);
