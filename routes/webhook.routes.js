@@ -116,12 +116,49 @@ async function procesarCurso(metadata, payment) {
   await nuevaCompra.save();
   console.log(`💾 Compra guardada correctamente en la BD.`);
 
-  await enviarEmail({
-    from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
-    to: metadata.email,
-    subject: `✅ Confirmación de tu inscripción: ${metadata.tipo || metadata.producto}`,
-    html: `<p>Hola ${metadata.nombre}, tu inscripción ha sido confirmada con éxito.</p>`
-  }, 'Curso - Alumno');
+ await enviarEmail({
+  from: 'Bruno G. Medicina China <confirmacion@brunomtch.com>',
+  to: metadata.email,
+  subject: `✅ Confirmación de tu inscripción: ${metadata.tipo || metadata.producto}`,
+  html: `
+  <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <h2 style="color: #00796b; text-align: center;">¡Inscripción confirmada! 🎉</h2>
+
+      <p style="font-size: 16px; color: #333;">
+        Hola <strong>${metadata.nombre}</strong>,
+      </p>
+
+      <p style="font-size: 15px; color: #333; line-height: 1.5;">
+        Tu inscripción al curso <strong>${metadata.tipo || metadata.producto}</strong> ha sido confirmada con éxito.
+      </p>
+
+      <p style="font-size: 15px; color: #333; line-height: 1.5;">
+        Ya podés acceder al material y recursos desde el siguiente enlace:
+      </p>
+
+      <div style="text-align: center; margin: 25px 0;">
+        <a href="https://drive.google.com/drive/folders/1fiQhOllmw8k7YE89UXzPucigUM5wUoqp?usp=drive_link"
+           style="background-color: #00796b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
+          Acceder al material del curso
+        </a>
+      </div>
+
+      <p style="font-size: 14px; color: #777; text-align: center;">
+        Si tenés alguna duda, podés responder a este correo o escribirnos a 
+        <a href="mailto:contacto@brunomtch.com" style="color: #00796b; text-decoration: none;">contacto@brunomtch.com</a>.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+      <p style="font-size: 13px; color: #999; text-align: center;">
+        © ${new Date().getFullYear()} Bruno G. Medicina China — Todos los derechos reservados.
+      </p>
+    </div>
+  </div>
+  `
+}, 'Capacitacion - Alumno');
+
 
   await enviarEmail({
     from: 'Notificación de Curso <notificaciones@brunomtch.com>',
