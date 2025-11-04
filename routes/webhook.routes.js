@@ -171,14 +171,15 @@ async function procesarCurso(metadata, payment) {
           <div style="text-align: center; margin: 25px 0;">
             <a href="https://drive.google.com/drive/folders/1fiQhOllmw8k7YE89UXzPucigUM5wUoqp?usp=drive_link"
               style="background-color: #00796b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
-              Acceder al material del curso
+              Acceder al material de la capacitacion
             </a>
           </div>
 
-          <p style="font-size: 14px; color: #777; text-align: center;">
-            Si tenés alguna duda, podés responder a este correo o escribirnos a 
-            <a href="mailto:contacto@brunomtch.com" style="color: #00796b; text-decoration: none;">contacto@brunomtch.com</a>.
-          </p>
+          <p style="font-size: 15px; line-height: 1.6;">
+      Si tenés alguna duda o querés comunicarte con nosotros, podés responder a este correo 
+      <strong>o escribirnos al WhatsApp 
+      <a href="https://wa.me/5492617242768" style="color: #00695c; text-decoration: none;">+54 9 261 724 2768</a></strong>.
+    </p>
 
           <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
 
