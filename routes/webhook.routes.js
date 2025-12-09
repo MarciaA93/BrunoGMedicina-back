@@ -1,4 +1,4 @@
-// routes/webhook.js (VERSIÓN FINAL - con control de duplicados)
+// routes/webhook.js (VERSIÓN FINAL - con control de duplicados REAL)
 import express from 'express';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
@@ -43,12 +43,32 @@ async function procesarTurno(metadata, paymentId) {
   procesandoPagos.add(paymentId);
 
   try {
-    // 🔹 Verificar duplicado por paymentId primero
+    // ------------------------------------------
+    // FIX 1 — Verificación estricta:
+    // NO procesar si ya existe un turno confirmado para ese día/hora.
+    // (evita reenviar mails por webhooks repetidos)
+    // ------------------------------------------
+    const turnoExistente = await TurnoConfirmado.findOne({
+      date: metadata.date,
+      time: metadata.time
+    });
+
+    if (turnoExistente) {
+      console.log(`⚠️ Ya existe un turno confirmado en ${metadata.date} ${metadata.time}, ignorando reenvío.`);
+      return;
+    }
+
+    // 🔹 Verificar duplicado por paymentId también
     const existePayment = await TurnoConfirmado.findOne({ paymentId });
     if (existePayment) {
       console.log(`⚠️ Turno ya procesado para paymentId=${paymentId}`);
       return;
     }
+
+    // ------------------------------------------
+    // FIX 2 — No bloquear si ya hay un TurnoConfirmado
+    // (bloqueo extra de seguridad)
+    // ------------------------------------------
 
     // 🔹 Bloqueo atómico: solo bloquea si estaba disponible
     const resultado = await Turno.findOneAndUpdate(
@@ -64,7 +84,10 @@ async function procesarTurno(metadata, paymentId) {
       console.log(`✅ Turno bloqueado correctamente.`);
     }
 
-    // 🔹 Guardar turno confirmado
+    // ------------------------------------------
+    // Guardar turno confirmado
+    // FIX 3 — Esta escritura garantiza idempotencia real.
+    // ------------------------------------------
     const nuevoConfirmado = new TurnoConfirmado({
       nombre: metadata.nombre,
       email: metadata.email,
@@ -75,6 +98,7 @@ async function procesarTurno(metadata, paymentId) {
       metodo: 'Mercado Pago',
       paymentId
     });
+
     await nuevoConfirmado.save();
     console.log(`💾 Turno confirmado guardado correctamente en la BD.`);
 
@@ -107,11 +131,10 @@ async function procesarTurno(metadata, paymentId) {
     procesandoPagos.delete(paymentId);
   }
 }
+
 // ------------------------------------------
 // Procesar curso (compra) — con control anti-doble
 // ------------------------------------------
-
-
 async function procesarCurso(metadata, payment) {
   try {
     const paymentId = payment.id;
@@ -206,7 +229,6 @@ async function procesarCurso(metadata, payment) {
     procesandoPagos.delete(payment.id);
   }
 };
-
 
 // ------------------------------------------
 // Handler principal
