@@ -4,11 +4,21 @@ import mongoose from 'mongoose';
 const turnoConfirmadoSchema = new mongoose.Schema({
   nombre: String,
   email: String,
-  tipo: String, // ← este campo ahora se llama tipo, no producto
-  date: String, // ← ahora coincide con metadata.date
-  time: String, // ← ahora coincide con metadata.time
+  tipo: String,
+  date: String,
+  time: String,
   fechaCompra: Date,
-  metodo: String
+  metodo: String,
+  paymentId: {
+    type: String,
+    required: true
+  }
 });
+
+// 🔥 Clave única: evita duplicados para el mismo turno
+turnoConfirmadoSchema.index({ date: 1, time: 1 }, { unique: true });
+
+// 🔥 Clave única: evita procesar un payment más de una vez
+turnoConfirmadoSchema.index({ paymentId: 1 }, { unique: true });
 
 export default mongoose.model('TurnoConfirmado', turnoConfirmadoSchema);

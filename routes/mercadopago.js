@@ -1,37 +1,28 @@
 import express from 'express';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import dotenv from 'dotenv';
-import { handleWebhook } from './webhook.routes.js'; // Importamos la función handler
+import { handleWebhook } from './webhook.routes.js';
+import Turno from '../models/Turno.js';
+import TurnoConfirmado from '../models/TurnoConfirmado.js';
 
 dotenv.config();
-const router = express.Router(); 
+const router = express.Router();
 
-
-// Inicialización del cliente de Mercado Pago
+// Inicialización de MP
 const client = new MercadoPagoConfig({
   accessToken: process.env.MP_ACCESS_TOKEN,
 });
 const preference = new Preference(client);
 
-// -------------------
-// RUTA PARA TURNOS
-// -------------------
+// -------------------------
+// RUTA TURNOS
+// -------------------------
 router.post('/create_preference', async (req, res) => {
   const requestId = `${req.body.email}-${req.body.date}-${req.body.time}`;
   console.log(`🆔 Nueva petición /create_preference (${requestId})`);
   console.log("📥 Datos recibidos en body (Turno):", req.body);
 
   const { title, unit_price, quantity, nombre, email, date, time } = req.body;
-  
-  // --- Protección contra doble click o reenvío rápido ---
-if (global.lastRequest && global.lastRequest.id === requestId) {
-  const diff = Date.now() - global.lastRequest.time;
-  if (diff < 3000) { // menos de 3 segundos
-    console.warn(`⚠️ Petición duplicada detectada (${requestId}), ignorando...`);
-    return res.status(429).json({ error: 'Petición duplicada detectada' });
-  }
-}
-global.lastRequest = { id: requestId, time: Date.now() };
 
   if (!title || !unit_price || !quantity || !nombre || !email || !date || !time) {
     console.error("❌ Faltan datos obligatorios para el turno");
@@ -39,6 +30,30 @@ global.lastRequest = { id: requestId, time: Date.now() };
   }
 
   try {
+    // ----------------------------
+    // 🔒 VALIDACIÓN CLAVE #1:
+    // el turno debe estar disponible antes de crear preferencia
+    // ----------------------------
+    const turno = await Turno.findOne({ date });
+    if (!turno) {
+      return res.status(400).json({ error: 'La fecha seleccionada no existe.' });
+    }
+
+    const slot = turno.timeSlots.find(s => s.time === time);
+    if (!slot || !slot.available) {
+      return res.status(400).json({ error: 'Ese horario ya fue reservado.' });
+    }
+
+    // ----------------------------
+    // 🔒 VALIDACIÓN CLAVE #2:
+    // que NO exista TurnoConfirmado (ya pagado)
+    // ----------------------------
+    const confirmado = await TurnoConfirmado.findOne({ date, time });
+    if (confirmado) {
+      return res.status(400).json({ error: 'Ese turno ya fue confirmado previamente.' });
+    }
+    
+    // Crear preferencia
     const result = await preference.create({
       body: {
         items: [{
@@ -54,7 +69,7 @@ global.lastRequest = { id: requestId, time: Date.now() };
           pending: `${process.env.FRONTEND_URL}/pending`
         },
         auto_return: "approved",
-        notification_url: process.env.MP_NOTIFICATION_URL || 'https://brunogmedicina-back-production.up.railway.app/api/webhook',
+        notification_url: process.env.MP_NOTIFICATION_URL,
         metadata: {
           nombre: String(nombre),
           email: String(email),
@@ -65,18 +80,24 @@ global.lastRequest = { id: requestId, time: Date.now() };
       }
     });
 
-    console.log('✅ Preferencia de Turno creada:', result);
-    res.status(200).json({ init_point: result.init_point });
+    const initPoint = result.init_point || result.response?.init_point;
+    if (!initPoint) {
+      console.error("⚠️ No se encontró init_point");
+      return res.status(500).json({ error: 'No se pudo obtener el link de pago.' });
+    }
+
+    console.log("✅ Preferencia creada:", initPoint);
+    res.status(200).json({ init_point: initPoint });
 
   } catch (error) {
-    console.error('❌ Error al crear preferencia de Turno:', error.message || error);
+    console.error("❌ Error al crear preferencia:", error.message || error);
     res.status(500).json({ error: 'Error al generar preferencia' });
   }
 });
 
-// -------------------
-// RUTA PARA CURSOS
-// -------------------
+// -------------------------
+// RUTA CURSOS
+// -------------------------
 router.post('/create_course_preference', async (req, res) => {
   console.log("📥 Datos recibidos para CURSO:", req.body);
 
@@ -89,7 +110,6 @@ router.post('/create_course_preference', async (req, res) => {
 
   try {
     const result = await preference.create({
-      
       body: {
         items: [{
           title: String(title),
@@ -104,7 +124,7 @@ router.post('/create_course_preference', async (req, res) => {
           pending: `${process.env.FRONTEND_URL}/pending`
         },
         auto_return: "approved",
-        notification_url: process.env.MP_NOTIFICATION_URL || 'https://brunogmedicina-back-production.up.railway.app/api/webhook',
+        notification_url: process.env.MP_NOTIFICATION_URL,
         metadata: {
           producto: 'curso',
           nombre: String(nombre),
@@ -117,22 +137,22 @@ router.post('/create_course_preference', async (req, res) => {
     const initPoint = result.init_point || result.response?.init_point;
 
     if (!initPoint) {
-      console.error("⚠️ No se encontró init_point en la respuesta de Mercado Pago:", result);
+      console.error("⚠️ No se encontró init_point", result);
       return res.status(500).json({ error: 'No se pudo obtener el link de pago' });
     }
 
-    console.log('✅ Preferencia de CURSO creada correctamente:', initPoint);
+    console.log("✅ Preferencia de curso creada:", initPoint);
     res.status(200).json({ init_point: initPoint });
 
   } catch (error) {
-    console.error('❌ Error al crear preferencia de CURSO:', error.message || error);
+    console.error("❌ Error al crear preferencia de CURSO:", error);
     res.status(500).json({ error: 'Error al generar preferencia para el curso' });
   }
 });
 
-// -------------------
-// WEBHOOK DE MERCADO PAGO
-// -------------------
+// -------------------------
+// WEBHOOK
+// -------------------------
 router.post("/webhook", handleWebhook);
 
 export default router;
